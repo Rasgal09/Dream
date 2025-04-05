@@ -48,12 +48,12 @@ export default function RoutineScreen() {
 const styles = StyleSheet.create({
   scrollContainer: {
     paddingBottom: 55, 
+    paddingTop: 20, // Espacio superior
   },
   container: {
     flex: 1,
     backgroundColor: Colors.fondos,
     alignItems: 'center',
     padding: 20,
-    paddingTop: 10,        // Espacio superior
   },
 });

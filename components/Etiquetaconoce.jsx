@@ -83,13 +83,14 @@ const styles = StyleSheet.create({
   },
   container : {
     flex: 1,
-    justifyContent: 'center',
+    
     alignItems: 'center',
     
     flexDirection: 'row'
   },
   texte : {
-    alignItems: 'center',
+    flex: 1,
+    
     flexShrink: 1,
     
   },
