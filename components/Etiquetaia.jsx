@@ -3,7 +3,7 @@ import React from 'react';
 import { Kanit_800ExtraBold, useFonts } from '@expo-google-fonts/kanit';
 import { SofiaSans_800ExtraBold, SofiaSans_500Medium } from '@expo-google-fonts/sofia-sans';
 import { Brain } from '../assets/Brain';
-import { Colors } from './Colors';
+import { Colors } from '../assets/Colors';
 import { LinearGradient } from 'expo-linear-gradient';
 
 

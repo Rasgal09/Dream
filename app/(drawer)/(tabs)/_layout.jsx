@@ -2,14 +2,15 @@ import { StyleSheet, View } from 'react-native';
 import React from 'react';
 import { Tabs } from 'expo-router';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Colors } from '../../components/Colors';
+import { Colors } from '../../../assets/Colors';
 import { StatusBar } from 'expo-status-bar';
-import TabBar from '../../components/TabBar'; // Importación sin llaves
+import TabBar from '../../../components/TabBar'; // Asegúrate que la importación es correcta
 
 const Layout = () => {
     return (
         <SafeAreaProvider style={styles.container}>
-            <StatusBar style="light"/>
+            <StatusBar style="light" backgroundColor={Colors.fondos} />
+            
             <Tabs 
                 tabBar={props => <TabBar {...props} />}
                 screenOptions={{
@@ -51,6 +52,5 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: Colors.fondos,
-        
     }
 })

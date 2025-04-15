@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View, TouchableOpacity } from 'react-native'
 import React from 'react'
-import { Colors } from './Colors';
+import { Colors } from '../assets/Colors';
 import { TabBarButton } from './TabBarButton';
 
 const TabBar = ({state, descriptors, navigation}) => {

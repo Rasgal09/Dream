@@ -1,11 +1,15 @@
 import { StyleSheet, Text, View, TextInput, Pressable } from 'react-native';
 import { Link } from 'expo-router';
 import { useFonts, SofiaSans_900Black} from '@expo-google-fonts/sofia-sans';
-import { Logo } from '../components/Logo';
+import { Logo } from '../../components/Logo';
 import { Kanit_900Black } from '@expo-google-fonts/kanit';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Colors } from '../../assets/Colors';
 
-const sesioon = () =>{
+const Session = () =>{
+
+  const insets = useSafeAreaInsets();
 
   const [fontsLoaded] = useFonts({
     SofiaSans_900Black,
@@ -44,7 +48,9 @@ const sesioon = () =>{
         style={styles.button}
         >
         <Link href="/Home" asChild>
-          <Pressable >
+          <Pressable 
+            
+          >
             <Text style={styles.buttonText}>INGRESAR</Text>
           </Pressable>
         </Link>
@@ -60,20 +66,20 @@ const sesioon = () =>{
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
+    
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#1A1A1A',
+    backgroundColor: Colors.fondos,
   },
   title: {
-    color: "#fff",
+    color: Colors.text2,
     fontSize: 40,
     fontFamily: 'SofiaSans_900Black',
     marginBottom: 10,
   },
   subtitle: {
     fontSize: 20,
-    color: 'silver',
+    color: Colors.text1,
     fontFamily: 'SofiaSans_900Black',
     marginBottom: 20,
   },
@@ -84,34 +90,33 @@ const styles = StyleSheet.create({
     borderRadius: 15,
     paddingHorizontal: 20,
     marginBottom: 15,
-    textcolor: '#B1B1B1',
-    backgroundColor: '#313131',
+    textcolor: Colors.text1,
+    backgroundColor: Colors.fondos2,
   },
   button: {
     width: '60%',
     height: 50,
-    backgroundColor: '#2dc88a91',
+    
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: 15,
     marginBottom: 15,
   },
   buttonText: {
-    color: '#fff',
+    color: Colors.text2,
     fontSize: 16,
     fontFamily: 'Kanit_900Black',
   },
   footerText: {
     fontSize: 14,
-    color: '#fff',
+    color: Colors.text2,
     fontFamily: 'SofiaSans_900Black',
   },
   linkText: {
     
     fontWeight: 'bold',
     fontFamily: 'SofiaSans_900Black',
-    LinearGradient: '',
   },
 });
 
-export default sesioon;
+export default Session;

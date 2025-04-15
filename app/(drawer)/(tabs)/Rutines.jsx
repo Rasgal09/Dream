@@ -1,8 +1,8 @@
 import { StyleSheet, View, ScrollView, SafeAreaView } from 'react-native';
 import React from 'react'
-import { Rutina } from '../../components/Rutina'
+import { Rutina } from '../../../components/Rutina'
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Colors } from '../../components/Colors';
+import { Colors } from '../../../assets/Colors';
 
 const rutines = () => {
 

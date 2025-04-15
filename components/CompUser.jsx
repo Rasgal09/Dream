@@ -1,13 +1,30 @@
 import { Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native'
 import React from 'react'
-import { Colors } from '../../components/Colors';
-import { Userprofile } from '../../components/Userprofile';
-import { icons } from '../../assets/icons';
+import { Colors } from '../assets/Colors';
+import { Userprofile } from '../assets/Userprofile';
+import { icons } from '../assets/icons';
+import { useNavigation, DrawerActions } from '@react-navigation/native';
 
-const User = () => {
+export const CompUser = () => {
+  
+const navigation = useNavigation();
+const handleMenuPress = () => {
+  navigation.dispatch(DrawerActions.openDrawer());
+}
+
   return (
     <View style={styles.container}>
-      <icons.Menu color={Colors.text1}/>
+      
+
+
+      <TouchableOpacity 
+              style={styles.menuIcon}
+              onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
+            >
+              <icons.Menu color={Colors.text1}/>
+      </TouchableOpacity>
+
+
       <Userprofile/>
       
       <View>
@@ -21,7 +38,7 @@ const User = () => {
       </View>
       <View style={styles.datos}>
       <Text style={styles.text}>
-          Nombre del Usuario 
+          Nombre del Usuariio
         </Text>
       </View>
       <View style={styles.datos}>
@@ -38,7 +55,7 @@ const User = () => {
   )
 }
 
-export default User
+export default CompUser
 
 const styles = StyleSheet.create({
   container: {
@@ -46,6 +63,11 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: Colors.fondos,
+  },
+  menuIcon: {
+    position: 'absolute',
+    top: 40,
+    right: 20,
   },
   cont:{
     flexDirection: 'row',

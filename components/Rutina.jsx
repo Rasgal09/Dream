@@ -1,7 +1,7 @@
 import { StyleSheet, Text, View, TouchableOpacity, ScrollView, SafeAreaView } from 'react-native';
 import React from 'react'
 import { LinearGradient } from 'expo-linear-gradient';
-import { Colors } from './Colors';
+import { Colors } from '../assets/Colors';
 
 export const Rutina = () => {
     

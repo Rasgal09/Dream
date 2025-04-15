@@ -1,11 +1,11 @@
 import React from 'react';
 import { StyleSheet, View, FlatList } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Etiquetarutina } from '../../components/Etiquetarutina';
-import { Etiquetadieta } from '../../components/Etiquetadieta';
-import { Etiquetaia } from '../../components/Etiquetaia';
-import { Etiquetaconoce } from '../../components/Etiquetaconoce';
-import { Colors } from '../../components/Colors';
+import { Etiquetarutina } from '../../../components/Etiquetarutina';
+import { Etiquetadieta } from '../../../components/Etiquetadieta';
+import { Etiquetaia } from '../../../components/Etiquetaia';
+import { Etiquetaconoce } from '../../../components/Etiquetaconoce';
+import { Colors } from '../../../assets/Colors';
 
 export default function RoutineScreen() {
   const insets = useSafeAreaInsets();
