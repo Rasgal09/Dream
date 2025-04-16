@@ -10,7 +10,9 @@ export const icons = {
     Menu: (props) => <MaterialIcons name="menu" size={40} color={props.color} />,
     Arrow: (props) => <MaterialIcons name="arrow-back-ios" size={24} color={props.color} />,
     Logout: (props) => <MaterialIcons name="logout" size={24} color={props.color} />,
-    Light: (props) => <MaterialIcons name="light-mode" size={24} color={props.color} />,
+    Light: (props) => <MaterialIcons name="light-mode" size={props.size} color={props.color} />,
     Dark: (props) => <MaterialIcons name="dark-mode" size={24} color={props.color} />,
     Theme: (props) => <MaterialIcons name="theme-light-dark" size={24} color={props.color} />,
+    CheckBox: (props) => <MaterialCommunityIcons name="checkbox-blank-circle-outline" size={props.size} color={props.color} />,
+    CheckCircle: (props) => <MaterialCommunityIcons name="check-circle" size={props.size} color={props.color} />,
 }
