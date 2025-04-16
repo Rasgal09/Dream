@@ -18,11 +18,11 @@ const calcularIMC = (peso, altura) => {
 // Datos de ejemplo del usuario
 const datosUsuario = {
   nombre: "Usuario de Ejemplo",
-  edad: 21,
-  altura: 173, // en cm
+  edad: 28,
+  altura: 175, // en cm
   historial: {
     fechas: ["Ene", "Feb", "Mar", "Abr", "May", "Jun"],
-    peso: [75, 78, 76, 74, 73.5, 70],
+    peso: [75, 78, 90, 90, 90, 90],
     grasaCorporal: [22, 21, 20.5, 19.8, 19, 18.5],
     masaMuscular: [33, 33.5, 34, 34.5, 35, 35.5],
   },
