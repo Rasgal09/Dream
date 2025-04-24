@@ -128,14 +128,11 @@ const RutinaGymPersonalizada = () => {
   ];
 
   const workoutDurationOptions = [
-    { label: "Ráfaga", value: "burst", duration: "7 min" },
-    { label: "Impulso", value: "boost", duration: "10 min" },
-    { label: "Típico", value: "typical", duration: "15 min" },
-    { label: "Poder", value: "power", duration: "25 min" },
-    { label: "Intenso", value: "intense", duration: "45 min" },
-    { label: "Maratón", value: "marathon", duration: "60 min" },
+    { label: "Fuerte", value: "1hr", duration: "1 hr" },
+    { label: "Intenso", value: "1hr30", duration: "1 hr 30 min" },
+    { label: "Maratón", value: "2hrs", duration: "2 hrs" },
   ];
-
+  
   const equipmentOptions = [
     { label: "Mancuernas", value: "dumbbells" },
     { label: "Barra", value: "barbell" },
