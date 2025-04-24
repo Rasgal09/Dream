@@ -7,22 +7,26 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 
-const uri = 'mongodb+srv://albertorasgado17:123456@cluster0.sxzufhi.mongodb.net/FortIA?retryWrites=true&w=majority';
+// URI modificada con la base de datos Dreamer
+const uri = 'mongodb://localhost:27017/Dreamer';
 
-const client = new MongoClient(uri);
+const client = new MongoClient(uri, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+});
 
 async function connectDB() {
     try {
         await client.connect();
-        console.log('Conectado a MongoDB Atlas');
+        console.log('Conectado a MongoDB Compass local');
     } catch (error) {
-        console.error('Error al conectar a MongoDB Atlas:', error);
+        console.error('Error al conectar a MongoDB:', error);
     }
 }
 
 connectDB();
 
-// Ruta de registro mejorada
+// Ruta de registro modificada
 app.post('/registro', async (req, res) => {
     try {
         const { nombre, genero, correo, contraseña, peso, altura } = req.body; 
@@ -37,22 +41,18 @@ app.post('/registro', async (req, res) => {
             return res.status(400).json({ error: 'Formato de correo inválido' });
         }
 
-        // Verificar si el usuario ya existe
-        const usuarioExistente = await client.db('FortIA').collection('usuarios').findOne({ correo });
+        // Verificar si el usuario ya existe (colección usuario)
+        const usuarioExistente = await client.db('Dreamer').collection('usuario').findOne({ correo });
         if (usuarioExistente) {
             return res.status(400).json({ error: 'El correo ya está registrado' });
         }
 
-        // Encriptar contraseña
-        //const hashedPassword = await bcrypt.hash(contraseña, 10);
-
-        // Insertar nuevo usuario con todos los campos
-        const result = await client.db('FortIA').collection('usuarios').insertOne({
+        // Insertar nuevo usuario en la colección usuario
+        const result = await client.db('Dreamer').collection('usuario').insertOne({
             nombre,
             genero,
             correo,
             contraseña,
-            //contraseña: hashedPassword,
             fechaRegistro: new Date(),
             peso: peso ? parseFloat(peso) : null,
             altura: altura ? parseFloat(altura) : null,
@@ -83,7 +83,8 @@ app.post('/login', async (req, res) => {
             });
         }
 
-        const usuario = await client.db('FortIA').collection('usuarios').findOne({ correo });
+        // Buscar en la colección usuario
+        const usuario = await client.db('Dreamer').collection('usuario').findOne({ correo });
         
         if (!usuario) {
             return res.status(400).json({ 
@@ -92,7 +93,6 @@ app.post('/login', async (req, res) => {
             });
         }
 
-        // Comparación directa (sin encriptación)
         if (contraseña !== usuario.contraseña) {
             return res.status(400).json({ 
                 success: false,

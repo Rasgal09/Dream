@@ -11,6 +11,9 @@ import {
   PanResponder,
   Platform
 } from 'react-native';
+
+import axios from 'axios';
+
 import { useFonts, SofiaSans_900Black } from '@expo-google-fonts/sofia-sans';
 import { Kanit_900Black } from '@expo-google-fonts/kanit';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -189,7 +192,25 @@ const RegistroCompleto = () => {
         ]).start();
       });
     } else {
-      console.log("Registro completado");
+      // Registro final cuando se completa el último paso
+      const userData = {
+        nombre: nombre,
+        genero: selectedSex,
+        correo: correo,
+        contraseña: contrasena,
+        peso: selectedWeight,
+        altura: selectedHeight
+      };
+  
+      axios.post('http://localhost:3000/registro', userData)
+        .then(response => {
+          console.log('Registro exitoso:', response.data);
+          // Aquí puedes redirigir al usuario o mostrar mensaje de éxito
+        })
+        .catch(error => {
+          console.error('Error en el registro:', error.response?.data);
+          // Aquí puedes mostrar un mensaje de error al usuario
+        });
     }
   };
 
