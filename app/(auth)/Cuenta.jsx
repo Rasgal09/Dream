@@ -8,18 +8,18 @@ import {
   Dimensions, 
   Animated, 
   ScrollView,
-  PanResponder,
   Platform
 } from 'react-native';
 import { useFonts, SofiaSans_900Black } from '@expo-google-fonts/sofia-sans';
 import { Kanit_900Black } from '@expo-google-fonts/kanit';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
 
 const { width, height } = Dimensions.get('window');
-const ITEM_HEIGHT = 60; // Aumentado para mejor visibilidad
+const ITEM_HEIGHT = 60;
 const VISIBLE_ITEMS = 5;
-const WHEEL_WIDTH = width * 0.7; // Ancho del selector
+const WHEEL_WIDTH = width * 0.7;
 
 const RegistroCompleto = () => {
   const insets = useSafeAreaInsets();
@@ -189,7 +189,8 @@ const RegistroCompleto = () => {
         ]).start();
       });
     } else {
-      console.log("Registro completado");
+      // CAMBIO PRINCIPAL: Usamos router.replace de Expo Router
+      router.replace('/Home');
     }
   };
 
