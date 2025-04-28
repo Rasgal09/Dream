@@ -1,15 +1,17 @@
 import { Drawer } from 'expo-router/drawer';
-import { Ionicons } from '@expo/vector-icons';
+import { MaterialIcons, MaterialCommunityIcons } from '@expo/vector-icons';
 import { Colors } from '../../assets/Colors';
 import { useRouter } from 'expo-router';
 import { icons } from '../../assets/icons';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 
 export default function DrawerLayout() {
   const router = useRouter();
 
     return (
-    <Drawer
+    <SafeAreaProvider>
+      <Drawer
       screenOptions={{
         headerShown: false,
         drawerInactiveTintColor: Colors.text2,
@@ -28,7 +30,7 @@ export default function DrawerLayout() {
         options={{
           title: 'Inicio',
           drawerIcon: ({ color }) => (
-            <icons.Home color={color} />
+            <MaterialIcons name='home' size={22} color={color} style={{padding:10}}/>
           ),
         }}
       />
@@ -37,7 +39,7 @@ export default function DrawerLayout() {
         options={{
           title: 'Configuración',
           drawerIcon: ({ color }) => (
-            <Ionicons name="settings-outline" size={22} color={color} style={{padding:10}}/>
+            <MaterialIcons name="settings" size={22} color={color} style={{padding:10}}/>
           ),
         }}
       />
@@ -46,11 +48,12 @@ export default function DrawerLayout() {
         options={{
           title: 'Ejercicios',
           drawerIcon: ({ color }) => (
-            <Ionicons name="person" size={22} color={color} style={{padding:10}}/>
+            <MaterialIcons name="person" size={22} color={color} style={{padding:10}}/>
           ),
         }}
       />
       
     </Drawer>
+    </SafeAreaProvider>
   );
 }

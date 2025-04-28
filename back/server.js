@@ -10,11 +10,7 @@ app.use(cors());
 // URI modificada con la base de datos Dreamer
 const uri = 'mongodb://localhost:27017/Dreamer';
 
-const client = new MongoClient(uri, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-});
-
+const client = new MongoClient(uri); 
 async function connectDB() {
     try {
         await client.connect();

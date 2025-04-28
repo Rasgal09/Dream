@@ -5,30 +5,37 @@ import { SofiaSans_800ExtraBold, SofiaSans_500Medium } from '@expo-google-fonts/
 import { Brain } from '../assets/Brain';
 import { Colors } from '../assets/Colors';
 import { LinearGradient } from 'expo-linear-gradient';
-
+import { router } from 'expo-router'; // Import del router
 
 export const Etiquetaia = () => {
-
   const [fontsLoaded] = useFonts({
     SofiaSans_800ExtraBold,
     Kanit_800ExtraBold,
     SofiaSans_500Medium
   });
-  
+
   if (!fontsLoaded) { 
     return null; 
   }
 
+  const handlePress = () => {
+    try {
+      router.push('/(drawer)/PreExcer');
+    } catch (error) {
+      console.error("Error en navegación:", error);
+    }
+  };
+
   return (
     <View style={styles.card}>
       <Text style={styles.titulo}>INICIA UNA NUEVA RUTINA</Text>
-      <View  style={styles.container}>
-        <Brain style={styles.img}/>
-        <View style={styles.texte}>        
+      <View style={styles.container}>
+        <Brain style={styles.img} />
+        <View style={styles.texte}>
           <Text style={styles.texto}>
-          Utiliza una herramienta con IA para diseñar una rutina adecuada a tus metas
+            Utiliza una herramienta con IA para diseñar una rutina adecuada a tus metas
           </Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={handlePress}>
             <LinearGradient colors={Colors.gradient} style={styles.btn}>
               <Text style={styles.txtbtn}>FORTIA CREA TU RUTINA</Text>
             </LinearGradient>
@@ -39,10 +46,8 @@ export const Etiquetaia = () => {
   );
 };
 
-
-
 const styles = StyleSheet.create({
-  card : {
+  card: {
     backgroundColor: Colors.fondos2,
     borderRadius: 15,
     padding: 20,
@@ -50,46 +55,40 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '90%',
   },
-  titulo : {
+  titulo: {
     fontSize: 16,
     fontFamily: 'Kanit_800ExtraBold',
     color: Colors.text1,
     marginBottom: 5,
-    textAlign: "center",
-
+    textAlign: 'center',
   },
-  texto : {
+  texto: {
     color: Colors.text2,
     textAlign: 'center',
     fontSize: 14,
     fontFamily: 'SofiaSans_800ExtraBold',
-    paddingBottom: 25
-    
+    paddingBottom: 25,
   },
-  btn : {
+  btn: {
     padding: 11,
     borderRadius: 5,
-   
     alignItems: 'center',
-    
   },
-  txtbtn : {
+  txtbtn: {
     fontFamily: 'SofiaSans_500Medium',
-    color: Colors.text2
-  }, 
-  img :{
-    
+    color: Colors.text2,
   },
-  container : {
+  img: {
+    // Puedes ajustar estilos para la imagen aquí si quieres
+  },
+  container: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    
-    flexDirection: 'row'
+    flexDirection: 'row',
   },
-  texte : {
+  texte: {
     alignItems: 'center',
     flexShrink: 1,
-    
   },
 });
