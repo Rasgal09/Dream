@@ -6,9 +6,10 @@ import {
   Pressable, 
   Dimensions, 
   Animated, 
-  ScrollView,
+  FlatList,
   Platform,
-  TextInput
+  TextInput,
+  StatusBar
 } from 'react-native';
 import { useFonts, SofiaSans_900Black } from '@expo-google-fonts/sofia-sans';
 import { Kanit_900Black } from '@expo-google-fonts/kanit';
@@ -18,6 +19,19 @@ import { router } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 const { width, height } = Dimensions.get('window');
+
+// Colores de la app
+const COLORS = {
+  background: '#1A1A1A',
+  card: '#252525',
+  border: '#333',
+  text: '#FFF',
+  textSecondary: '#999',
+  primary: '#00D078',
+  secondary: '#007DF0',
+  danger: '#FF3B30',
+  disabled: 'rgba(255, 255, 255, 0.5)'
+};
 
 const RutinaGymPersonalizada = () => {
   const insets = useSafeAreaInsets();
@@ -59,14 +73,14 @@ const RutinaGymPersonalizada = () => {
 
   // Options
   const focusAreaOptions = [
-    { label: "Cuerpo completo", value: "full_body" },
-    { label: "Hombros de roca", value: "shoulders" },
-    { label: "Bíceps masivos", value: "biceps" },
-    { label: "Pecho amplio", value: "chest" },
-    { label: "Espalda ancha", value: "back" },
-    { label: "Abdominales", value: "abs" },
-    { label: "Glúteos firmes", value: "glutes" },
-    { label: "Piernas fuertes", value: "legs" },
+    { label: "Cuerpo completo", value: "full_body", icon: "human" },
+    { label: "Hombros de roca", value: "shoulders", icon: "human-handsup" },
+    { label: "Bíceps masivos", value: "biceps", icon: "arm-flex" },
+    { label: "Pecho amplio", value: "chest", icon: "human-male" },
+    { label: "Espalda ancha", value: "back", icon: "human-male-board" },
+    { label: "Abdominales", value: "abs", icon: "six-pack" },
+    { label: "Glúteos firmes", value: "glutes", icon: "human-female" },
+    { label: "Piernas fuertes", value: "legs", icon: "human-male-height" },
   ];
 
   const trainingPlaceOptions = [
@@ -92,7 +106,7 @@ const RutinaGymPersonalizada = () => {
       label: "Mezcla", 
       value: "mixed", 
       description: "Combinación de entrenamientos en gimnasio y en casa",
-      icon: "mix"
+      icon: "shuffle-variant"
     },
   ];
 
@@ -128,20 +142,20 @@ const RutinaGymPersonalizada = () => {
   ];
 
   const workoutDurationOptions = [
-    { label: "Fuerte", value: "1hr", duration: "1 hr" },
-    { label: "Intenso", value: "1hr30", duration: "1 hr 30 min" },
-    { label: "Maratón", value: "2hrs", duration: "2 hrs" },
+    { label: "Fuerte", value: "1hr", duration: "1 hr", icon: "clock-time-three" },
+    { label: "Intenso", value: "1hr30", duration: "1 hr 30 min", icon: "clock-time-six" },
+    { label: "Maratón", value: "2hrs", duration: "2 hrs", icon: "clock-time-nine" },
   ];
   
   const equipmentOptions = [
-    { label: "Mancuernas", value: "dumbbells" },
-    { label: "Barra", value: "barbell" },
-    { label: "Kettlebells", value: "kettlebells" },
-    { label: "Bandas de resistencia", value: "resistance_bands" },
-    { label: "Máquinas de gym", value: "gym_machines" },
-    { label: "Pesas rusas", value: "kettlebell_russian" }, // Cambiado para evitar duplicado
-    { label: "Cuerda para saltar", value: "jump_rope" },
-    { label: "Balón medicinal", value: "medicine_ball" },
+    { label: "Mancuernas", value: "dumbbells", icon: "dumbbell" },
+    { label: "Barra", value: "barbell", icon: "weight-lifter" },
+    { label: "Kettlebells", value: "kettlebells", icon: "weight" },
+    { label: "Bandas de resistencia", value: "resistance_bands", icon: "bandage" },
+    { label: "Máquinas de gym", value: "gym_machines", icon: "robot" },
+    { label: "Pesas rusas", value: "kettlebell_russian", icon: "weight-kilogram" },
+    { label: "Cuerda para saltar", value: "jump_rope", icon: "skipping-rope" },
+    { label: "Balón medicinal", value: "medicine_ball", icon: "basketball" },
   ];
 
   const workoutTypeOptions = [
@@ -179,7 +193,7 @@ const RutinaGymPersonalizada = () => {
       label: "Mixto", 
       value: "mixed", 
       description: "Combinación de diferentes tipos de entrenamiento",
-      icon: "mix"
+      icon: "shuffle-variant"
     },
   ];
 
@@ -264,91 +278,148 @@ const RutinaGymPersonalizada = () => {
     }
   };
 
+  // Nueva función para retroceder un paso
+  const prevStep = () => {
+    if (step > 0) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 150,
+          useNativeDriver: true
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 30,
+          duration: 150,
+          useNativeDriver: true
+        })
+      ]).start(() => {
+        setStep(step - 1);
+        Animated.parallel([
+          Animated.timing(progressAnim, {
+            toValue: (step - 1) / (steps.length - 1),
+            duration: 300,
+            useNativeDriver: false
+          }),
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 200,
+            useNativeDriver: true
+          }),
+          Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true
+          })
+        ]).start();
+      });
+    }
+  };
+
   const renderFocusAreaOptions = () => {
     return (
-      <ScrollView contentContainerStyle={styles.checkboxContainer}>
-        {focusAreaOptions.map((option) => (
+      <FlatList
+        data={focusAreaOptions}
+        keyExtractor={(item) => item.value}
+        numColumns={2}
+        columnWrapperStyle={styles.focusAreaRow}
+        renderItem={({ item }) => (
           <Pressable
-            key={option.value}
             style={[
               styles.focusOption,
-              selectedFocusAreas.includes(option.value) && styles.focusOptionSelected
+              selectedFocusAreas.includes(item.value) && styles.focusOptionSelected
             ]}
-            onPress={() => toggleSelection('focusAreas', option.value)}
+            onPress={() => toggleSelection('focusAreas', item.value)}
+            android_ripple={{ color: 'rgba(0, 208, 120, 0.1)' }}
           >
+            <MaterialCommunityIcons 
+              name={item.icon} 
+              size={28} 
+              color={selectedFocusAreas.includes(item.value) ? COLORS.primary : COLORS.textSecondary} 
+              style={styles.focusIcon}
+            />
             <Text style={[
               styles.focusOptionText,
-              selectedFocusAreas.includes(option.value) && styles.focusOptionTextSelected
+              selectedFocusAreas.includes(item.value) && styles.focusOptionTextSelected
             ]}>
-              {option.label}
+              {item.label}
             </Text>
           </Pressable>
-        ))}
-      </ScrollView>
+        )}
+        contentContainerStyle={styles.focusOptionsContainer}
+        showsVerticalScrollIndicator={false}
+      />
     );
   };
 
   const renderTrainingPlaceOptions = () => {
     return (
-      <ScrollView contentContainerStyle={styles.optionsContainer}>
-        {trainingPlaceOptions.map((option) => (
+      <FlatList
+        data={trainingPlaceOptions}
+        keyExtractor={(item) => item.value}
+        renderItem={({ item }) => (
           <Pressable
-            key={option.value}
             style={[
               styles.optionCard,
-              selectedTrainingPlace === option.value && styles.optionCardSelected
+              selectedTrainingPlace === item.value && styles.optionCardSelected
             ]}
-            onPress={() => setSelectedTrainingPlace(option.value)}
+            onPress={() => setSelectedTrainingPlace(item.value)}
+            android_ripple={{ color: 'rgba(0, 208, 120, 0.1)' }}
           >
             <View style={styles.optionHeader}>
               <MaterialCommunityIcons 
-                name={option.icon} 
+                name={item.icon} 
                 size={24} 
-                color={selectedTrainingPlace === option.value ? '#00D078' : '#666'} 
+                color={selectedTrainingPlace === item.value ? COLORS.primary : COLORS.textSecondary} 
               />
               <Text style={[
                 styles.optionCardTitle,
-                selectedTrainingPlace === option.value && styles.optionCardTitleSelected
+                selectedTrainingPlace === item.value && styles.optionCardTitleSelected
               ]}>
-                {option.label}
+                {item.label}
               </Text>
             </View>
-            <Text style={styles.optionCardDescription}>{option.description}</Text>
+            <Text style={styles.optionCardDescription}>{item.description}</Text>
           </Pressable>
-        ))}
-      </ScrollView>
+        )}
+        contentContainerStyle={styles.optionsContainer}
+        showsVerticalScrollIndicator={false}
+      />
     );
   };
 
   const renderFitnessLevelOptions = () => {
     return (
-      <ScrollView contentContainerStyle={styles.optionsContainer}>
-        {fitnessLevelOptions.map((option) => (
+      <FlatList
+        data={fitnessLevelOptions}
+        keyExtractor={(item) => item.value}
+        renderItem={({ item }) => (
           <Pressable
-            key={option.value}
             style={[
               styles.optionCard,
-              selectedFitnessLevel === option.value && styles.optionCardSelected
+              selectedFitnessLevel === item.value && styles.optionCardSelected
             ]}
-            onPress={() => setSelectedFitnessLevel(option.value)}
+            onPress={() => setSelectedFitnessLevel(item.value)}
+            android_ripple={{ color: 'rgba(0, 208, 120, 0.1)' }}
           >
             <View style={styles.optionHeader}>
               <MaterialCommunityIcons 
-                name={option.icon} 
+                name={item.icon} 
                 size={24} 
-                color={selectedFitnessLevel === option.value ? '#00D078' : '#666'} 
+                color={selectedFitnessLevel === item.value ? COLORS.primary : COLORS.textSecondary} 
               />
               <Text style={[
                 styles.optionCardTitle,
-                selectedFitnessLevel === option.value && styles.optionCardTitleSelected
+                selectedFitnessLevel === item.value && styles.optionCardTitleSelected
               ]}>
-                {option.label}
+                {item.label}
               </Text>
             </View>
-            <Text style={styles.optionCardDescription}>{option.description}</Text>
+            <Text style={styles.optionCardDescription}>{item.description}</Text>
           </Pressable>
-        ))}
-      </ScrollView>
+        )}
+        contentContainerStyle={styles.optionsContainer}
+        showsVerticalScrollIndicator={false}
+      />
     );
   };
 
@@ -364,6 +435,7 @@ const RutinaGymPersonalizada = () => {
                 selectedWorkoutDays.includes(day.value) && styles.dayButtonSelected
               ]}
               onPress={() => toggleSelection('workoutDays', day.value)}
+              android_ripple={{ color: 'rgba(255, 255, 255, 0.2)' }}
             >
               <Text style={[
                 styles.dayButtonText,
@@ -374,72 +446,152 @@ const RutinaGymPersonalizada = () => {
             </Pressable>
           ))}
         </View>
-        <Text style={styles.daysNote}>Selecciona los días que quieres entrenar</Text>
+        
+        <View style={styles.selectedDaysContainer}>
+          <Text style={styles.selectedDaysTitle}>Días seleccionados:</Text>
+          <View style={styles.selectedDaysList}>
+            {selectedWorkoutDays.length > 0 ? (
+              workoutDayOptions
+                .filter(day => selectedWorkoutDays.includes(day.value))
+                .map(day => (
+                  <View key={day.value} style={styles.selectedDayChip}>
+                    <Text style={styles.selectedDayChipText}>{day.label}</Text>
+                    <Pressable
+                      onPress={() => toggleSelection('workoutDays', day.value)}
+                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    >
+                      <MaterialCommunityIcons name="close-circle" size={18} color={COLORS.text} />
+                    </Pressable>
+                  </View>
+                ))
+            ) : (
+              <Text style={styles.noDaysSelectedText}>No has seleccionado ningún día</Text>
+            )}
+          </View>
+        </View>
+        
+        <Text style={styles.daysNote}>
+          Selecciona los días que puedes entrenar para crear una rutina óptima
+        </Text>
       </View>
     );
   };
 
   const renderWorkoutDurationOptions = () => {
     return (
-      <ScrollView contentContainerStyle={styles.durationContainer}>
-        {workoutDurationOptions.map((option) => (
+      <FlatList
+        data={workoutDurationOptions}
+        keyExtractor={(item) => item.value}
+        renderItem={({ item }) => (
           <Pressable
-            key={option.value}
             style={[
               styles.durationOption,
-              selectedWorkoutDuration === option.value && styles.durationOptionSelected
+              selectedWorkoutDuration === item.value && styles.durationOptionSelected
             ]}
-            onPress={() => setSelectedWorkoutDuration(option.value)}
+            onPress={() => setSelectedWorkoutDuration(item.value)}
+            android_ripple={{ color: 'rgba(0, 208, 120, 0.1)' }}
           >
-            <Text style={[
-              styles.durationOptionText,
-              selectedWorkoutDuration === option.value && styles.durationOptionTextSelected
-            ]}>
-              {option.label}
-            </Text>
-            <Text style={[
-              styles.durationOptionTime,
-              selectedWorkoutDuration === option.value && styles.durationOptionTimeSelected
-            ]}>
-              {option.duration}
-            </Text>
+            <View style={styles.durationHeader}>
+              <MaterialCommunityIcons 
+                name={item.icon} 
+                size={28} 
+                color={selectedWorkoutDuration === item.value ? COLORS.primary : COLORS.textSecondary} 
+              />
+              <View style={styles.durationTextContainer}>
+                <Text style={[
+                  styles.durationOptionText,
+                  selectedWorkoutDuration === item.value && styles.durationOptionTextSelected
+                ]}>
+                  {item.label}
+                </Text>
+                <Text style={[
+                  styles.durationOptionTime,
+                  selectedWorkoutDuration === item.value && styles.durationOptionTimeSelected
+                ]}>
+                  {item.duration}
+                </Text>
+              </View>
+              {selectedWorkoutDuration === item.value && (
+                <MaterialCommunityIcons 
+                  name="check-circle" 
+                  size={24} 
+                  color={COLORS.primary} 
+                  style={styles.durationCheckIcon}
+                />
+              )}
+            </View>
           </Pressable>
-        ))}
-      </ScrollView>
+        )}
+        contentContainerStyle={styles.durationContainer}
+        showsVerticalScrollIndicator={false}
+      />
     );
   };
 
   const renderEquipmentOptions = () => {
+    // Crear un array con las opciones y añadir la opción "Otros" al final
+    const allEquipmentOptions = [...equipmentOptions, { label: "Otros", value: "other", icon: "plus-circle" }];
+    
     return (
-      <ScrollView contentContainerStyle={styles.checkboxContainer}>
-        {equipmentOptions.map((option) => (
-          <Pressable
-            key={option.value}
-            style={styles.checkboxOption}
-            onPress={() => toggleSelection('equipment', option.value)}
-          >
-            <View style={styles.checkbox}>
-              {selectedEquipment.includes(option.value) && (
-                <View style={styles.checkboxSelected} />
-              )}
-            </View>
-            <Text style={styles.checkboxLabel}>{option.label}</Text>
-          </Pressable>
-        ))}
-        
-        {!showOtherEquipmentInput && (
-          <Pressable
-            style={styles.checkboxOption}
-            onPress={() => setShowOtherEquipmentInput(true)}
-          >
-            <View style={styles.checkbox}>
-              {selectedEquipment.some(e => !equipmentOptions.some(o => o.value === e)) && (
-                <View style={styles.checkboxSelected} />
-              )}
-            </View>
-            <Text style={styles.checkboxLabel}>Otros</Text>
-          </Pressable>
-        )}
+      <View style={styles.equipmentMainContainer}>
+        <FlatList
+          data={allEquipmentOptions}
+          keyExtractor={(item) => item.value}
+          numColumns={2}
+          columnWrapperStyle={styles.equipmentRow}
+          renderItem={({ item }) => {
+            if (item.value === "other") {
+              return (
+                <Pressable
+                  style={styles.equipmentOption}
+                  onPress={() => setShowOtherEquipmentInput(!showOtherEquipmentInput)}
+                  android_ripple={{ color: 'rgba(0, 208, 120, 0.1)' }}
+                >
+                  <View style={styles.equipmentCheckbox}>
+                    {selectedEquipment.some(e => !equipmentOptions.some(o => o.value === e)) && (
+                      <View style={styles.equipmentCheckboxSelected} />
+                    )}
+                  </View>
+                  <MaterialCommunityIcons 
+                    name={item.icon} 
+                    size={24} 
+                    color={COLORS.textSecondary} 
+                    style={styles.equipmentIcon}
+                  />
+                  <Text style={styles.equipmentLabel}>{item.label}</Text>
+                </Pressable>
+              );
+            }
+            
+            return (
+              <Pressable
+                style={styles.equipmentOption}
+                onPress={() => toggleSelection('equipment', item.value)}
+                android_ripple={{ color: 'rgba(0, 208, 120, 0.1)' }}
+              >
+                <View style={styles.equipmentCheckbox}>
+                  {selectedEquipment.includes(item.value) && (
+                    <View style={styles.equipmentCheckboxSelected} />
+                  )}
+                </View>
+                <MaterialCommunityIcons 
+                  name={item.icon} 
+                  size={24} 
+                  color={selectedEquipment.includes(item.value) ? COLORS.primary : COLORS.textSecondary} 
+                  style={styles.equipmentIcon}
+                />
+                <Text style={[
+                  styles.equipmentLabel,
+                  selectedEquipment.includes(item.value) && styles.equipmentLabelSelected
+                ]}>
+                  {item.label}
+                </Text>
+              </Pressable>
+            );
+          }}
+          contentContainerStyle={styles.equipmentContainer}
+          showsVerticalScrollIndicator={false}
+        />
         
         {showOtherEquipmentInput && (
           <View style={styles.otherInputContainer}>
@@ -448,11 +600,12 @@ const RutinaGymPersonalizada = () => {
               placeholder="Escribe tu equipamiento"
               value={otherEquipment}
               onChangeText={setOtherEquipment}
-              placeholderTextColor="#666"
+              placeholderTextColor={COLORS.textSecondary}
             />
             <Pressable
               style={styles.addButton}
               onPress={addOtherEquipment}
+              android_ripple={{ color: 'rgba(255, 255, 255, 0.2)' }}
             >
               <Text style={styles.addButtonText}>Añadir</Text>
             </Pressable>
@@ -461,61 +614,92 @@ const RutinaGymPersonalizada = () => {
         
         {selectedEquipment.some(e => !equipmentOptions.some(o => o.value === e)) && (
           <View style={styles.addedItemsContainer}>
-            {selectedEquipment
-              .filter(e => !equipmentOptions.some(o => o.value === e))
-              .map((item, index) => (
-                <View key={`other-${index}`} style={styles.addedItem}>
+            <Text style={styles.addedItemsTitle}>Equipamiento personalizado:</Text>
+            <FlatList
+              data={selectedEquipment.filter(e => !equipmentOptions.some(o => o.value === e))}
+              keyExtractor={(item, index) => `custom-equipment-${index}`}
+              horizontal
+              renderItem={({ item }) => (
+                <View style={styles.addedItem}>
                   <Text style={styles.addedItemText}>{item}</Text>
                   <Pressable
                     onPress={() => setSelectedEquipment(selectedEquipment.filter(e => e !== item))}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
-                    <MaterialCommunityIcons name="close" size={20} color="#FF3B30" />
+                    <MaterialCommunityIcons name="close" size={20} color={COLORS.danger} />
                   </Pressable>
                 </View>
-              ))}
+              )}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.addedItemsList}
+            />
           </View>
         )}
-      </ScrollView>
+      </View>
     );
   };
 
   const renderWorkoutTypeOptions = () => {
     return (
-      <ScrollView contentContainerStyle={styles.optionsContainer}>
-        {workoutTypeOptions.map((option) => (
+      <FlatList
+        data={workoutTypeOptions}
+        keyExtractor={(item) => item.value}
+        renderItem={({ item }) => (
           <Pressable
-            key={option.value}
             style={[
               styles.optionCard,
-              selectedWorkoutType === option.value && styles.optionCardSelected
+              selectedWorkoutType === item.value && styles.optionCardSelected
             ]}
-            onPress={() => setSelectedWorkoutType(option.value)}
+            onPress={() => setSelectedWorkoutType(item.value)}
+            android_ripple={{ color: 'rgba(0, 208, 120, 0.1)' }}
           >
             <View style={styles.optionHeader}>
               <MaterialCommunityIcons 
-                name={option.icon} 
+                name={item.icon} 
                 size={24} 
-                color={selectedWorkoutType === option.value ? '#00D078' : '#666'} 
+                color={selectedWorkoutType === item.value ? COLORS.primary : COLORS.textSecondary} 
               />
               <Text style={[
                 styles.optionCardTitle,
-                selectedWorkoutType === option.value && styles.optionCardTitleSelected
+                selectedWorkoutType === item.value && styles.optionCardTitleSelected
               ]}>
-                {option.label}
+                {item.label}
               </Text>
+              {selectedWorkoutType === item.value && (
+                <MaterialCommunityIcons 
+                  name="check-circle" 
+                  size={24} 
+                  color={COLORS.primary} 
+                />
+              )}
             </View>
-            <Text style={styles.optionCardDescription}>{option.description}</Text>
+            <Text style={styles.optionCardDescription}>{item.description}</Text>
           </Pressable>
-        ))}
-      </ScrollView>
+        )}
+        contentContainerStyle={styles.optionsContainer}
+        showsVerticalScrollIndicator={false}
+      />
     );
   };
 
   const renderCompletion = () => {
     return (
       <View style={styles.completionContainer}>
-        <MaterialCommunityIcons name="weight-lifter" size={60} color="#00D078" />
+        <MaterialCommunityIcons name="weight-lifter" size={60} color={COLORS.primary} />
         <Text style={styles.completionText}>¡Estamos generando tu rutina personalizada basada en tus preferencias!</Text>
+        <View style={styles.loadingIndicator}>
+          <Animated.View 
+            style={[
+              styles.loadingBar,
+              {
+                width: progressAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['0%', '100%']
+                })
+              }
+            ]} 
+          />
+        </View>
       </View>
     );
   };
@@ -545,22 +729,46 @@ const RutinaGymPersonalizada = () => {
     }
   };
 
+  const isNextButtonDisabled = () => {
+    return (
+      (step === 0 && selectedFocusAreas.length === 0) || 
+      (step === 1 && !selectedTrainingPlace) || 
+      (step === 2 && !selectedFitnessLevel) ||
+      (step === 3 && selectedWorkoutDays.length === 0) ||
+      (step === 4 && !selectedWorkoutDuration) ||
+      (step === 6 && !selectedWorkoutType)
+    );
+  };
+
   if (!fontsLoaded) return null;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Progress Bar */}
-      <View style={styles.progressContainer}>
-        <Text style={styles.progressText}>Paso {step + 1} de {steps.length}</Text>
-        <View style={styles.progressBar}>
-          <Animated.View style={[
-            styles.progressFill,
-            { width: progressAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: ['0%', '100%']
-              }) 
-            }
-          ]} />
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+      
+      {/* Header con botón de retroceso */}
+      <View style={styles.header}>
+        {step > 0 && (
+          <Pressable 
+            style={styles.backButton} 
+            onPress={prevStep}
+            android_ripple={{ color: 'rgba(255, 255, 255, 0.1)', radius: 20 }}
+          >
+            <MaterialCommunityIcons name="arrow-left" size={24} color={COLORS.text} />
+          </Pressable>
+        )}
+        <View style={styles.progressContainer}>
+          <Text style={styles.progressText}>Paso {step + 1} de {steps.length}</Text>
+          <View style={styles.progressBar}>
+            <Animated.View style={[
+              styles.progressFill,
+              { width: progressAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['0%', '100%']
+                }) 
+              }
+            ]} />
+          </View>
         </View>
       </View>
 
@@ -579,25 +787,14 @@ const RutinaGymPersonalizada = () => {
         <Pressable
           style={[
             styles.continueButton,
-            ((step === 0 && selectedFocusAreas.length === 0) || 
-             (step === 1 && !selectedTrainingPlace) || 
-             (step === 2 && !selectedFitnessLevel) ||
-             (step === 3 && selectedWorkoutDays.length === 0) ||
-             (step === 4 && !selectedWorkoutDuration) ||
-             (step === 6 && !selectedWorkoutType)) && { opacity: 0.5 }
+            isNextButtonDisabled() && styles.continueButtonDisabled
           ]}
           onPress={nextStep}
-          disabled={
-            (step === 0 && selectedFocusAreas.length === 0) || 
-            (step === 1 && !selectedTrainingPlace) || 
-            (step === 2 && !selectedFitnessLevel) ||
-            (step === 3 && selectedWorkoutDays.length === 0) ||
-            (step === 4 && !selectedWorkoutDuration) ||
-            (step === 6 && !selectedWorkoutType)
-          }
+          disabled={isNextButtonDisabled()}
+          android_ripple={{ color: 'rgba(255, 255, 255, 0.2)' }}
         >
           <LinearGradient
-            colors={['#00D078', '#007DF0']}
+            colors={[COLORS.primary, COLORS.secondary]}
             style={styles.gradientButton}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
@@ -605,6 +802,12 @@ const RutinaGymPersonalizada = () => {
             <Text style={styles.buttonText}>
               {step === steps.length - 1 ? 'GENERAR RUTINA' : 'CONTINUAR'}
             </Text>
+            <MaterialCommunityIcons 
+              name={step === steps.length - 1 ? "check" : "arrow-right"} 
+              size={20} 
+              color={COLORS.text} 
+              style={styles.buttonIcon}
+            />
           </LinearGradient>
         </Pressable>
       </Animated.View>
@@ -616,26 +819,39 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#1A1A1A'
+    backgroundColor: COLORS.background
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 20,
+    marginRight: 10
   },
   progressContainer: {
-    marginBottom: 30
+    flex: 1
   },
   progressText: {
-    color: '#999',
+    color: COLORS.textSecondary,
     fontSize: 14,
     marginBottom: 5,
     fontFamily: 'SofiaSans_900Black'
   },
   progressBar: {
     height: 8,
-    backgroundColor: '#333',
+    backgroundColor: COLORS.border,
     borderRadius: 4,
     overflow: 'hidden'
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#007DF0',
+    backgroundColor: COLORS.secondary,
     borderRadius: 4
   },
   contentContainer: {
@@ -643,13 +859,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    color: '#FFF',
+    color: COLORS.text,
     marginBottom: 10,
     fontFamily: 'SofiaSans_900Black'
   },
   subtitle: {
     fontSize: 16,
-    color: '#999',
+    color: COLORS.textSecondary,
     marginBottom: 30,
     fontFamily: 'SofiaSans_900Black'
   },
@@ -661,16 +877,17 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   optionCard: {
-    backgroundColor: '#252525',
+    backgroundColor: COLORS.card,
     borderRadius: 12,
     padding: 20,
     marginBottom: 15,
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: COLORS.border,
+    elevation: 2,
   },
   optionCardSelected: {
-    borderColor: '#00D078',
-    backgroundColor: '#252525',
+    borderColor: COLORS.primary,
+    backgroundColor: 'rgba(0, 208, 120, 0.05)',
   },
   optionHeader: {
     flexDirection: 'row',
@@ -678,127 +895,162 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   optionCardTitle: {
-    color: '#FFF',
+    color: COLORS.text,
     fontSize: 18,
     fontFamily: 'SofiaSans_900Black',
     marginLeft: 10,
     flex: 1,
   },
   optionCardTitleSelected: {
-    color: '#00D078',
+    color: COLORS.primary,
   },
   optionCardDescription: {
-    color: '#999',
+    color: COLORS.textSecondary,
     fontSize: 14,
     fontFamily: 'SofiaSans_900Black',
     marginLeft: 34,
   },
-  checkboxContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+  focusOptionsContainer: {
     paddingBottom: 20,
+  },
+  focusAreaRow: {
+    justifyContent: 'space-between',
   },
   focusOption: {
     width: '48%',
-    backgroundColor: '#252525',
+    backgroundColor: COLORS.card,
     borderRadius: 12,
     padding: 15,
     marginBottom: 15,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: COLORS.border,
+    elevation: 2,
   },
   focusOptionSelected: {
-    borderColor: '#00D078',
+    borderColor: COLORS.primary,
+    backgroundColor: 'rgba(0, 208, 120, 0.05)',
+  },
+  focusIcon: {
+    marginBottom: 10,
   },
   focusOptionText: {
-    color: '#FFF',
+    color: COLORS.text,
     fontSize: 16,
     fontFamily: 'SofiaSans_900Black',
+    textAlign: 'center',
   },
   focusOptionTextSelected: {
-    color: '#00D078',
+    color: COLORS.primary,
   },
-  checkboxOption: {
+  equipmentMainContainer: {
+    flex: 1,
+  },
+  equipmentContainer: {
+    paddingBottom: 10,
+  },
+  equipmentRow: {
+    justifyContent: 'space-between',
+  },
+  equipmentOption: {
     width: '48%',
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    padding: 12,
     marginBottom: 15,
-    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
-  checkbox: {
+  equipmentCheckbox: {
     width: 20,
     height: 20,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: '#666',
+    borderColor: COLORS.textSecondary,
     marginRight: 10,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  checkboxSelected: {
+  equipmentCheckboxSelected: {
     width: 12,
     height: 12,
     borderRadius: 2,
-    backgroundColor: '#00D078',
+    backgroundColor: COLORS.primary,
   },
-  checkboxLabel: {
-    color: '#FFF',
-    fontSize: 16,
+  equipmentIcon: {
+    marginRight: 8,
+  },
+  equipmentLabel: {
+    color: COLORS.text,
+    fontSize: 14,
     fontFamily: 'SofiaSans_900Black',
     flex: 1,
+  },
+  equipmentLabelSelected: {
+    color: COLORS.primary,
   },
   otherInputContainer: {
     width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 15,
+    marginTop: 5,
   },
   otherInput: {
     flex: 1,
-    backgroundColor: '#252525',
+    backgroundColor: COLORS.card,
     borderRadius: 8,
     padding: 12,
-    color: '#FFF',
+    color: COLORS.text,
     fontFamily: 'SofiaSans_900Black',
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: COLORS.border,
     marginRight: 10,
   },
   addButton: {
-    backgroundColor: '#00D078',
+    backgroundColor: COLORS.primary,
     borderRadius: 8,
     padding: 12,
   },
   addButtonText: {
-    color: '#FFF',
+    color: COLORS.text,
     fontFamily: 'SofiaSans_900Black',
   },
   addedItemsContainer: {
     width: '100%',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     marginTop: 10,
+    marginBottom: 15,
+  },
+  addedItemsTitle: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    fontFamily: 'SofiaSans_900Black',
+    marginBottom: 10,
+  },
+  addedItemsList: {
+    paddingBottom: 5,
   },
   addedItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#252525',
+    backgroundColor: COLORS.card,
     borderRadius: 20,
     paddingVertical: 6,
     paddingHorizontal: 12,
     marginRight: 10,
     marginBottom: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   addedItemText: {
-    color: '#FFF',
+    color: COLORS.text,
     fontFamily: 'SofiaSans_900Black',
     marginRight: 8,
   },
   daysContainer: {
     flex: 1,
-    justifyContent: 'center',
     paddingBottom: 20,
   },
   daysGrid: {
@@ -810,87 +1062,160 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: '#252525',
+    backgroundColor: COLORS.card,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: COLORS.border,
+    elevation: 2,
   },
   dayButtonSelected: {
-    backgroundColor: '#007DF0',
-    borderColor: '#007DF0',
+    backgroundColor: COLORS.secondary,
+    borderColor: COLORS.secondary,
   },
   dayButtonText: {
-    color: '#FFF',
+    color: COLORS.text,
     fontSize: 14,
     fontFamily: 'SofiaSans_900Black',
   },
   dayButtonTextSelected: {
-    color: '#FFF',
+    color: COLORS.text,
+  },
+  selectedDaysContainer: {
+    marginBottom: 20,
+  },
+  selectedDaysTitle: {
+    color: COLORS.textSecondary,
+    fontSize: 14,
+    fontFamily: 'SofiaSans_900Black',
+    marginBottom: 10,
+  },
+  selectedDaysList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  selectedDayChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 125, 240, 0.2)',
+    borderRadius: 20,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 125, 240, 0.3)',
+  },
+  selectedDayChipText: {
+    color: COLORS.text,
+    fontFamily: 'SofiaSans_900Black',
+    marginRight: 8,
+  },
+  noDaysSelectedText: {
+    color: COLORS.textSecondary,
+    fontFamily: 'SofiaSans_900Black',
+    fontStyle: 'italic',
   },
   daysNote: {
-    color: '#999',
+    color: COLORS.textSecondary,
     fontSize: 14,
     textAlign: 'center',
     fontFamily: 'SofiaSans_900Black',
+    marginTop: 10,
   },
   durationContainer: {
     paddingBottom: 20,
   },
   durationOption: {
-    backgroundColor: '#252525',
+    backgroundColor: COLORS.card,
     borderRadius: 12,
     padding: 20,
     marginBottom: 15,
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: COLORS.border,
+    elevation: 2,
   },
   durationOptionSelected: {
-    borderColor: '#00D078',
+    borderColor: COLORS.primary,
+    backgroundColor: 'rgba(0, 208, 120, 0.05)',
+  },
+  durationHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  durationTextContainer: {
+    flex: 1,
+    marginLeft: 15,
   },
   durationOptionText: {
-    color: '#FFF',
+    color: COLORS.text,
     fontSize: 18,
     fontFamily: 'SofiaSans_900Black',
     marginBottom: 5,
   },
   durationOptionTextSelected: {
-    color: '#00D078',
+    color: COLORS.primary,
   },
   durationOptionTime: {
-    color: '#999',
+    color: COLORS.textSecondary,
     fontSize: 14,
     fontFamily: 'SofiaSans_900Black',
   },
   durationOptionTimeSelected: {
-    color: '#00D078',
+    color: COLORS.primary,
+  },
+  durationCheckIcon: {
+    marginLeft: 10,
   },
   continueButton: {
     width: '100%',
     borderRadius: 10,
-    overflow: 'hidden'
+    overflow: 'hidden',
+    elevation: 4,
+  },
+  continueButtonDisabled: {
+    opacity: 0.5,
   },
   gradientButton: {
     padding: 15,
-    alignItems: 'center'
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
   buttonText: {
-    color: '#FFF',
+    color: COLORS.text,
     fontSize: 16,
-    fontFamily: 'Kanit_900Black'
+    fontFamily: 'Kanit_900Black',
+    marginRight: 8,
+  },
+  buttonIcon: {
+    marginLeft: 4,
   },
   completionContainer: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
+    paddingHorizontal: 20,
   },
   completionText: {
-    color: '#FFF',
+    color: COLORS.text,
     fontSize: 20,
     textAlign: 'center',
     fontFamily: 'SofiaSans_900Black',
     marginTop: 20,
-    paddingHorizontal: 20
+    marginBottom: 30,
+  },
+  loadingIndicator: {
+    width: '100%',
+    height: 8,
+    backgroundColor: COLORS.border,
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginTop: 20,
+  },
+  loadingBar: {
+    height: '100%',
+    backgroundColor: COLORS.primary,
+    borderRadius: 4,
   }
 });
 

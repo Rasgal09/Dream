@@ -6,9 +6,10 @@ import {
   Pressable, 
   Dimensions, 
   Animated, 
-  ScrollView,
+  FlatList,
   Platform,
-  TextInput
+  TextInput,
+  StatusBar
 } from 'react-native';
 import { useFonts, SofiaSans_900Black } from '@expo-google-fonts/sofia-sans';
 import { Kanit_900Black } from '@expo-google-fonts/kanit';
@@ -18,9 +19,19 @@ import { router } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 
 const { width, height } = Dimensions.get('window');
-const ITEM_HEIGHT = 60;
-const VISIBLE_ITEMS = 5;
-const WHEEL_WIDTH = width * 0.7;
+
+// Colores de la app
+const COLORS = {
+  background: '#1A1A1A',
+  card: '#252525',
+  border: '#333',
+  text: '#FFF',
+  textSecondary: '#999',
+  primary: '#00D078',
+  secondary: '#007DF0',
+  danger: '#FF3B30',
+  disabled: 'rgba(255, 255, 255, 0.5)'
+};
 
 const DietaPersonalizada = () => {
   const insets = useSafeAreaInsets();
@@ -278,155 +289,217 @@ const DietaPersonalizada = () => {
     }
   };
 
+  // Nueva función para retroceder un paso
+  const prevStep = () => {
+    if (step > 0) {
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 150,
+          useNativeDriver: true
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 30,
+          duration: 150,
+          useNativeDriver: true
+        })
+      ]).start(() => {
+        setStep(step - 1);
+        Animated.parallel([
+          Animated.timing(progressAnim, {
+            toValue: (step - 1) / (steps.length - 1),
+            duration: 300,
+            useNativeDriver: false
+          }),
+          Animated.timing(fadeAnim, {
+            toValue: 1,
+            duration: 200,
+            useNativeDriver: true
+          }),
+          Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 200,
+            useNativeDriver: true
+          })
+        ]).start();
+      });
+    }
+  };
+
   const renderDietTypeOptions = () => {
     return (
-      <ScrollView contentContainerStyle={styles.dietOptionsContainer}>
-        {dietTypeOptions.map((option) => (
+      <FlatList
+        data={dietTypeOptions}
+        keyExtractor={(item) => item.value}
+        renderItem={({ item }) => (
           <Pressable
-            key={option.value}
             style={[
               styles.dietOption,
-              selectedDietType === option.value && styles.dietOptionSelected
+              selectedDietType === item.value && styles.dietOptionSelected
             ]}
-            onPress={() => setSelectedDietType(option.value)}
+            onPress={() => setSelectedDietType(item.value)}
+            android_ripple={{ color: 'rgba(0, 208, 120, 0.1)' }}
           >
             <View style={styles.dietOptionHeader}>
               <View style={styles.radioButton}>
-                {selectedDietType === option.value && (
+                {selectedDietType === item.value && (
                   <View style={styles.radioButtonSelected} />
                 )}
               </View>
               <MaterialCommunityIcons 
-                name={option.icon} 
+                name={item.icon} 
                 size={24} 
-                color={selectedDietType === option.value ? '#00D078' : '#666'} 
+                color={selectedDietType === item.value ? COLORS.primary : COLORS.textSecondary} 
                 style={styles.optionIcon}
               />
               <Text style={[
                 styles.dietOptionTitle,
-                selectedDietType === option.value && styles.dietOptionTitleSelected
+                selectedDietType === item.value && styles.dietOptionTitleSelected
               ]}>
-                {option.label}
+                {item.label}
               </Text>
             </View>
-            <Text style={styles.dietOptionDescription}>{option.description}</Text>
+            <Text style={styles.dietOptionDescription}>{item.description}</Text>
           </Pressable>
-        ))}
-      </ScrollView>
+        )}
+        contentContainerStyle={styles.dietOptionsContainer}
+        showsVerticalScrollIndicator={false}
+      />
     );
   };
 
   const renderGoalOptions = () => {
     return (
-      <ScrollView contentContainerStyle={styles.optionsContainer}>
-        {goalOptions.map((option) => (
+      <FlatList
+        data={goalOptions}
+        keyExtractor={(item) => item.value}
+        renderItem={({ item }) => (
           <Pressable
-            key={option.value}
             style={[
               styles.optionCard,
-              selectedGoal === option.value && styles.optionCardSelected
+              selectedGoal === item.value && styles.optionCardSelected
             ]}
-            onPress={() => setSelectedGoal(option.value)}
+            onPress={() => setSelectedGoal(item.value)}
+            android_ripple={{ color: 'rgba(0, 208, 120, 0.1)' }}
           >
             <View style={styles.optionHeader}>
               <MaterialCommunityIcons 
-                name={option.icon} 
+                name={item.icon} 
                 size={24} 
-                color={selectedGoal === option.value ? '#00D078' : '#666'} 
+                color={selectedGoal === item.value ? COLORS.primary : COLORS.textSecondary} 
               />
               <Text style={[
                 styles.optionCardTitle,
-                selectedGoal === option.value && styles.optionCardTitleSelected
+                selectedGoal === item.value && styles.optionCardTitleSelected
               ]}>
-                {option.label}
+                {item.label}
               </Text>
             </View>
-            <Text style={styles.optionCardDescription}>{option.description}</Text>
+            <Text style={styles.optionCardDescription}>{item.description}</Text>
           </Pressable>
-        ))}
-      </ScrollView>
+        )}
+        contentContainerStyle={styles.optionsContainer}
+        showsVerticalScrollIndicator={false}
+      />
     );
   };
 
   const renderActivityOptions = () => {
     return (
-      <ScrollView contentContainerStyle={styles.optionsContainer}>
-        {activityOptions.map((option) => (
+      <FlatList
+        data={activityOptions}
+        keyExtractor={(item) => item.value}
+        renderItem={({ item }) => (
           <Pressable
-            key={option.value}
             style={[
               styles.optionCard,
-              selectedActivity === option.value && styles.optionCardSelected
+              selectedActivity === item.value && styles.optionCardSelected
             ]}
-            onPress={() => setSelectedActivity(option.value)}
+            onPress={() => setSelectedActivity(item.value)}
+            android_ripple={{ color: 'rgba(0, 208, 120, 0.1)' }}
           >
             <View style={styles.optionHeader}>
               <MaterialCommunityIcons 
-                name={option.icon} 
+                name={item.icon} 
                 size={24} 
-                color={selectedActivity === option.value ? '#00D078' : '#666'} 
+                color={selectedActivity === item.value ? COLORS.primary : COLORS.textSecondary} 
               />
               <Text style={[
                 styles.optionCardTitle,
-                selectedActivity === option.value && styles.optionCardTitleSelected
+                selectedActivity === item.value && styles.optionCardTitleSelected
               ]}>
-                {option.label}
+                {item.label}
               </Text>
             </View>
-            <Text style={styles.optionCardDescription}>{option.description}</Text>
+            <Text style={styles.optionCardDescription}>{item.description}</Text>
           </Pressable>
-        ))}
-      </ScrollView>
+        )}
+        contentContainerStyle={styles.optionsContainer}
+        showsVerticalScrollIndicator={false}
+      />
     );
   };
 
   const renderCheckboxOptions = (options, selectedValues, type) => {
     const isAllergies = type === 'allergies';
     
+    // Crear un array con las opciones y añadir la opción "Otros" al final
+    const allOptions = [...options, { label: "Otros", value: "other" }];
+    
     return (
-      <ScrollView contentContainerStyle={styles.checkboxContainer}>
-        {options.map((option) => (
-          <Pressable
-            key={option.value}
-            style={styles.checkboxOption}
-            onPress={() => toggleSelection(type, option.value)}
-          >
-            <View style={styles.checkbox}>
-              {selectedValues.includes(option.value) && (
-                <View style={styles.checkboxSelected} />
-              )}
-            </View>
-            <Text style={styles.checkboxLabel}>{option.label}</Text>
-          </Pressable>
-        ))}
-        
-        {!showOtherAllergyInput && isAllergies && (
-          <Pressable
-            style={styles.checkboxOption}
-            onPress={() => setShowOtherAllergyInput(true)}
-          >
-            <View style={styles.checkbox}>
-              {selectedAllergies.some(a => !allergyOptions.some(o => o.value === a)) && (
-                <View style={styles.checkboxSelected} />
-              )}
-            </View>
-            <Text style={styles.checkboxLabel}>Otros</Text>
-          </Pressable>
-        )}
-        
-        {!showOtherDislikeInput && !isAllergies && (
-          <Pressable
-            style={styles.checkboxOption}
-            onPress={() => setShowOtherDislikeInput(true)}
-          >
-            <View style={styles.checkbox}>
-              {selectedDislikes.some(d => !dislikeOptions.some(o => o.value === d)) && (
-                <View style={styles.checkboxSelected} />
-              )}
-            </View>
-            <Text style={styles.checkboxLabel}>Otros</Text>
-          </Pressable>
-        )}
+      <View style={styles.checkboxMainContainer}>
+        <FlatList
+          data={allOptions}
+          keyExtractor={(item, index) => `${item.value}-${index}`}
+          numColumns={2}
+          columnWrapperStyle={styles.checkboxRow}
+          renderItem={({ item }) => {
+            if (item.value === "other") {
+              return (
+                <Pressable
+                  style={styles.checkboxOption}
+                  onPress={() => {
+                    if (isAllergies) {
+                      setShowOtherAllergyInput(!showOtherAllergyInput);
+                    } else {
+                      setShowOtherDislikeInput(!showOtherDislikeInput);
+                    }
+                  }}
+                  android_ripple={{ color: 'rgba(0, 208, 120, 0.1)' }}
+                >
+                  <View style={styles.checkbox}>
+                    {isAllergies ? 
+                      (selectedAllergies.some(a => !allergyOptions.some(o => o.value === a)) && (
+                        <View style={styles.checkboxSelected} />
+                      )) : 
+                      (selectedDislikes.some(d => !dislikeOptions.some(o => o.value === d)) && (
+                        <View style={styles.checkboxSelected} />
+                      ))
+                    }
+                  </View>
+                  <Text style={styles.checkboxLabel}>Otros</Text>
+                </Pressable>
+              );
+            }
+            
+            return (
+              <Pressable
+                style={styles.checkboxOption}
+                onPress={() => toggleSelection(type, item.value)}
+                android_ripple={{ color: 'rgba(0, 208, 120, 0.1)' }}
+              >
+                <View style={styles.checkbox}>
+                  {selectedValues.includes(item.value) && (
+                    <View style={styles.checkboxSelected} />
+                  )}
+                </View>
+                <Text style={styles.checkboxLabel}>{item.label}</Text>
+              </Pressable>
+            );
+          }}
+          contentContainerStyle={styles.checkboxContainer}
+          showsVerticalScrollIndicator={false}
+        />
         
         {(showOtherAllergyInput && isAllergies) && (
           <View style={styles.otherInputContainer}>
@@ -435,11 +508,12 @@ const DietaPersonalizada = () => {
               placeholder="Escribe tu alergia o intolerancia"
               value={otherAllergy}
               onChangeText={setOtherAllergy}
-              placeholderTextColor="#666"
+              placeholderTextColor={COLORS.textSecondary}
             />
             <Pressable
               style={styles.addButton}
               onPress={addOtherAllergy}
+              android_ripple={{ color: 'rgba(255, 255, 255, 0.2)' }}
             >
               <Text style={styles.addButtonText}>Añadir</Text>
             </Pressable>
@@ -453,11 +527,12 @@ const DietaPersonalizada = () => {
               placeholder="Escribe el alimento que evitas"
               value={otherDislike}
               onChangeText={setOtherDislike}
-              placeholderTextColor="#666"
+              placeholderTextColor={COLORS.textSecondary}
             />
             <Pressable
               style={styles.addButton}
               onPress={addOtherDislike}
+              android_ripple={{ color: 'rgba(255, 255, 255, 0.2)' }}
             >
               <Text style={styles.addButtonText}>Añadir</Text>
             </Pressable>
@@ -466,38 +541,48 @@ const DietaPersonalizada = () => {
         
         {selectedAllergies.some(a => !allergyOptions.some(o => o.value === a)) && isAllergies && (
           <View style={styles.addedItemsContainer}>
-            {selectedAllergies
-              .filter(a => !allergyOptions.some(o => o.value === a))
-              .map((item, index) => (
-                <View key={index} style={styles.addedItem}>
+            <FlatList
+              data={selectedAllergies.filter(a => !allergyOptions.some(o => o.value === a))}
+              keyExtractor={(item, index) => `added-allergy-${index}`}
+              horizontal
+              renderItem={({ item }) => (
+                <View style={styles.addedItem}>
                   <Text style={styles.addedItemText}>{item}</Text>
                   <Pressable
                     onPress={() => setSelectedAllergies(selectedAllergies.filter(a => a !== item))}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
-                    <MaterialCommunityIcons name="close" size={20} color="#FF3B30" />
+                    <MaterialCommunityIcons name="close" size={20} color={COLORS.danger} />
                   </Pressable>
                 </View>
-              ))}
+              )}
+              showsHorizontalScrollIndicator={false}
+            />
           </View>
         )}
         
         {selectedDislikes.some(d => !dislikeOptions.some(o => o.value === d)) && !isAllergies && (
           <View style={styles.addedItemsContainer}>
-            {selectedDislikes
-              .filter(d => !dislikeOptions.some(o => o.value === d))
-              .map((item, index) => (
-                <View key={index} style={styles.addedItem}>
+            <FlatList
+              data={selectedDislikes.filter(d => !dislikeOptions.some(o => o.value === d))}
+              keyExtractor={(item, index) => `added-dislike-${index}`}
+              horizontal
+              renderItem={({ item }) => (
+                <View style={styles.addedItem}>
                   <Text style={styles.addedItemText}>{item}</Text>
                   <Pressable
                     onPress={() => setSelectedDislikes(selectedDislikes.filter(d => d !== item))}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
                   >
-                    <MaterialCommunityIcons name="close" size={20} color="#FF3B30" />
+                    <MaterialCommunityIcons name="close" size={20} color={COLORS.danger} />
                   </Pressable>
                 </View>
-              ))}
+              )}
+              showsHorizontalScrollIndicator={false}
+            />
           </View>
         )}
-      </ScrollView>
+      </View>
     );
   };
 
@@ -515,11 +600,12 @@ const DietaPersonalizada = () => {
                   mealsPerDay === num && styles.mealButtonSelected
                 ]}
                 onPress={() => setMealsPerDay(num)}
+                android_ripple={{ color: 'rgba(255, 255, 255, 0.2)' }}
               >
                 <MaterialCommunityIcons 
                   name="food" 
                   size={24} 
-                  color={mealsPerDay === num ? '#FFF' : '#666'} 
+                  color={mealsPerDay === num ? COLORS.text : COLORS.textSecondary} 
                 />
                 <Text style={[
                   styles.mealButtonText,
@@ -543,11 +629,12 @@ const DietaPersonalizada = () => {
                   cookingTime === time && styles.timeButtonSelected
                 ]}
                 onPress={() => setCookingTime(time)}
+                android_ripple={{ color: 'rgba(255, 255, 255, 0.2)' }}
               >
                 <MaterialCommunityIcons 
                   name="clock" 
                   size={20} 
-                  color={cookingTime === time ? '#FFF' : '#666'} 
+                  color={cookingTime === time ? COLORS.text : COLORS.textSecondary} 
                 />
                 <Text style={[
                   styles.timeButtonText,
@@ -582,8 +669,21 @@ const DietaPersonalizada = () => {
       case "completion":
         return (
           <View style={styles.completionContainer}>
-            <MaterialCommunityIcons name="chef-hat" size={60} color="#00D078" />
+            <MaterialCommunityIcons name="chef-hat" size={60} color={COLORS.primary} />
             <Text style={styles.completionText}>¡Estamos generando tu dieta personalizada basada en tus preferencias!</Text>
+            <View style={styles.loadingIndicator}>
+              <Animated.View 
+                style={[
+                  styles.loadingBar,
+                  {
+                    width: progressAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0%', '100%']
+                    })
+                  }
+                ]} 
+              />
+            </View>
           </View>
         );
       default:
@@ -591,22 +691,43 @@ const DietaPersonalizada = () => {
     }
   };
 
+  const isNextButtonDisabled = () => {
+    return (
+      (step === 0 && !selectedGoal) || 
+      (step === 1 && !selectedActivity) || 
+      (step === 2 && !selectedDietType)
+    );
+  };
+
   if (!fontsLoaded) return null;
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
-      {/* Progress Bar */}
-      <View style={styles.progressContainer}>
-        <Text style={styles.progressText}>Paso {step + 1} de {steps.length}</Text>
-        <View style={styles.progressBar}>
-          <Animated.View style={[
-            styles.progressFill,
-            { width: progressAnim.interpolate({
-                inputRange: [0, 1],
-                outputRange: ['0%', '100%']
-              }) 
-            }
-          ]} />
+      <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
+      
+      {/* Header con botón de retroceso */}
+      <View style={styles.header}>
+        {step > 0 && (
+          <Pressable 
+            style={styles.backButton} 
+            onPress={prevStep}
+            android_ripple={{ color: 'rgba(255, 255, 255, 0.1)', radius: 20 }}
+          >
+            <MaterialCommunityIcons name="arrow-left" size={24} color={COLORS.text} />
+          </Pressable>
+        )}
+        <View style={styles.progressContainer}>
+          <Text style={styles.progressText}>Paso {step + 1} de {steps.length}</Text>
+          <View style={styles.progressBar}>
+            <Animated.View style={[
+              styles.progressFill,
+              { width: progressAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: ['0%', '100%']
+                }) 
+              }
+            ]} />
+          </View>
         </View>
       </View>
 
@@ -625,19 +746,14 @@ const DietaPersonalizada = () => {
         <Pressable
           style={[
             styles.continueButton,
-            ((step === 0 && !selectedGoal) || 
-             (step === 1 && !selectedActivity) || 
-             (step === 2 && !selectedDietType)) && { opacity: 0.5 }
+            isNextButtonDisabled() && styles.continueButtonDisabled
           ]}
           onPress={nextStep}
-          disabled={
-            (step === 0 && !selectedGoal) || 
-            (step === 1 && !selectedActivity) || 
-            (step === 2 && !selectedDietType)
-          }
+          disabled={isNextButtonDisabled()}
+          android_ripple={{ color: 'rgba(255, 255, 255, 0.2)' }}
         >
           <LinearGradient
-            colors={['#00D078', '#007DF0']}
+            colors={[COLORS.primary, COLORS.secondary]}
             style={styles.gradientButton}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
@@ -645,6 +761,12 @@ const DietaPersonalizada = () => {
             <Text style={styles.buttonText}>
               {step === steps.length - 1 ? 'GENERAR DIETA' : 'CONTINUAR'}
             </Text>
+            <MaterialCommunityIcons 
+              name={step === steps.length - 1 ? "check" : "arrow-right"} 
+              size={20} 
+              color={COLORS.text} 
+              style={styles.buttonIcon}
+            />
           </LinearGradient>
         </Pressable>
       </Animated.View>
@@ -656,26 +778,39 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     padding: 20,
-    backgroundColor: '#1A1A1A'
+    backgroundColor: COLORS.background
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 20,
+    marginRight: 10
   },
   progressContainer: {
-    marginBottom: 30
+    flex: 1
   },
   progressText: {
-    color: '#999',
+    color: COLORS.textSecondary,
     fontSize: 14,
     marginBottom: 5,
     fontFamily: 'SofiaSans_900Black'
   },
   progressBar: {
     height: 8,
-    backgroundColor: '#333',
+    backgroundColor: COLORS.border,
     borderRadius: 4,
     overflow: 'hidden'
   },
   progressFill: {
     height: '100%',
-    backgroundColor: '#007DF0',
+    backgroundColor: COLORS.secondary,
     borderRadius: 4
   },
   contentContainer: {
@@ -683,13 +818,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    color: '#FFF',
+    color: COLORS.text,
     marginBottom: 10,
     fontFamily: 'SofiaSans_900Black'
   },
   subtitle: {
     fontSize: 16,
-    color: '#999',
+    color: COLORS.textSecondary,
     marginBottom: 30,
     fontFamily: 'SofiaSans_900Black'
   },
@@ -701,16 +836,17 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   optionCard: {
-    backgroundColor: '#252525',
+    backgroundColor: COLORS.card,
     borderRadius: 12,
     padding: 20,
     marginBottom: 15,
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: COLORS.border,
+    elevation: 2,
   },
   optionCardSelected: {
-    borderColor: '#00D078',
-    backgroundColor: '#252525',
+    borderColor: COLORS.primary,
+    backgroundColor: 'rgba(0, 208, 120, 0.05)',
   },
   optionHeader: {
     flexDirection: 'row',
@@ -718,17 +854,17 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   optionCardTitle: {
-    color: '#FFF',
+    color: COLORS.text,
     fontSize: 18,
     fontFamily: 'SofiaSans_900Black',
     marginLeft: 10,
     flex: 1,
   },
   optionCardTitleSelected: {
-    color: '#00D078',
+    color: COLORS.primary,
   },
   optionCardDescription: {
-    color: '#999',
+    color: COLORS.textSecondary,
     fontSize: 14,
     fontFamily: 'SofiaSans_900Black',
     marginLeft: 34,
@@ -737,15 +873,17 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   dietOption: {
-    backgroundColor: '#252525',
+    backgroundColor: COLORS.card,
     borderRadius: 12,
     padding: 20,
     marginBottom: 15,
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: COLORS.border,
+    elevation: 2,
   },
   dietOptionSelected: {
-    borderColor: '#00D078',
+    borderColor: COLORS.primary,
+    backgroundColor: 'rgba(0, 208, 120, 0.05)',
   },
   dietOptionHeader: {
     flexDirection: 'row',
@@ -757,7 +895,7 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 10,
     borderWidth: 2,
-    borderColor: '#666',
+    borderColor: COLORS.textSecondary,
     marginRight: 15,
     justifyContent: 'center',
     alignItems: 'center',
@@ -766,43 +904,34 @@ const styles = StyleSheet.create({
     width: 10,
     height: 10,
     borderRadius: 5,
-    backgroundColor: '#00D078',
+    backgroundColor: COLORS.primary,
   },
   optionIcon: {
     marginRight: 10,
   },
   dietOptionTitle: {
-    color: '#FFF',
+    color: COLORS.text,
     fontSize: 18,
     fontFamily: 'SofiaSans_900Black',
     flex: 1,
   },
   dietOptionTitleSelected: {
-    color: '#00D078',
+    color: COLORS.primary,
   },
   dietOptionDescription: {
-    color: '#999',
+    color: COLORS.textSecondary,
     fontSize: 14,
     fontFamily: 'SofiaSans_900Black',
     marginLeft: 45,
   },
-  recommendedBadge: {
-    backgroundColor: '#007DF0',
-    borderRadius: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    marginLeft: 10,
-  },
-  recommendedBadgeText: {
-    color: '#FFF',
-    fontSize: 10,
-    fontFamily: 'Kanit_900Black',
+  checkboxMainContainer: {
+    flex: 1,
   },
   checkboxContainer: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    paddingBottom: 10,
+  },
+  checkboxRow: {
     justifyContent: 'space-between',
-    paddingBottom: 20,
   },
   checkboxOption: {
     width: '48%',
@@ -816,7 +945,7 @@ const styles = StyleSheet.create({
     height: 20,
     borderRadius: 4,
     borderWidth: 1,
-    borderColor: '#666',
+    borderColor: COLORS.textSecondary,
     marginRight: 10,
     justifyContent: 'center',
     alignItems: 'center',
@@ -825,10 +954,10 @@ const styles = StyleSheet.create({
     width: 12,
     height: 12,
     borderRadius: 2,
-    backgroundColor: '#00D078',
+    backgroundColor: COLORS.primary,
   },
   checkboxLabel: {
-    color: '#FFF',
+    color: COLORS.text,
     fontSize: 16,
     fontFamily: 'SofiaSans_900Black',
     flex: 1,
@@ -838,45 +967,47 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 15,
+    marginTop: 5,
   },
   otherInput: {
     flex: 1,
-    backgroundColor: '#252525',
+    backgroundColor: COLORS.card,
     borderRadius: 8,
     padding: 12,
-    color: '#FFF',
+    color: COLORS.text,
     fontFamily: 'SofiaSans_900Black',
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: COLORS.border,
     marginRight: 10,
   },
   addButton: {
-    backgroundColor: '#00D078',
+    backgroundColor: COLORS.primary,
     borderRadius: 8,
     padding: 12,
   },
   addButtonText: {
-    color: '#FFF',
+    color: COLORS.text,
     fontFamily: 'SofiaSans_900Black',
   },
   addedItemsContainer: {
     width: '100%',
-    flexDirection: 'row',
-    flexWrap: 'wrap',
     marginTop: 10,
+    marginBottom: 15,
   },
   addedItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#252525',
+    backgroundColor: COLORS.card,
     borderRadius: 20,
     paddingVertical: 6,
     paddingHorizontal: 12,
     marginRight: 10,
     marginBottom: 10,
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   addedItemText: {
-    color: '#FFF',
+    color: COLORS.text,
     fontFamily: 'SofiaSans_900Black',
     marginRight: 8,
   },
@@ -887,7 +1018,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   preferenceTitle: {
-    color: '#FFF',
+    color: COLORS.text,
     fontSize: 16,
     fontFamily: 'SofiaSans_900Black',
     marginBottom: 15,
@@ -900,24 +1031,25 @@ const styles = StyleSheet.create({
     width: '23%',
     aspectRatio: 1,
     borderRadius: 12,
-    backgroundColor: '#252525',
+    backgroundColor: COLORS.card,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: COLORS.border,
+    elevation: 2,
   },
   mealButtonSelected: {
-    backgroundColor: '#007DF0',
-    borderColor: '#007DF0',
+    backgroundColor: COLORS.secondary,
+    borderColor: COLORS.secondary,
   },
   mealButtonText: {
-    color: '#FFF',
+    color: COLORS.text,
     fontSize: 18,
     fontFamily: 'SofiaSans_900Black',
     marginTop: 5,
   },
   mealButtonTextSelected: {
-    color: '#FFF',
+    color: COLORS.text,
   },
   timeButtons: {
     flexDirection: 'row',
@@ -927,50 +1059,76 @@ const styles = StyleSheet.create({
     width: '23%',
     paddingVertical: 12,
     borderRadius: 12,
-    backgroundColor: '#252525',
+    backgroundColor: COLORS.card,
     justifyContent: 'center',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#333',
+    borderColor: COLORS.border,
+    elevation: 2,
   },
   timeButtonSelected: {
-    backgroundColor: '#007DF0',
-    borderColor: '#007DF0',
+    backgroundColor: COLORS.secondary,
+    borderColor: COLORS.secondary,
   },
   timeButtonText: {
-    color: '#FFF',
+    color: COLORS.text,
     fontSize: 14,
     fontFamily: 'SofiaSans_900Black',
     marginTop: 5,
   },
   timeButtonTextSelected: {
-    color: '#FFF',
+    color: COLORS.text,
   },
   continueButton: {
     width: '100%',
     borderRadius: 10,
-    overflow: 'hidden'
+    overflow: 'hidden',
+    elevation: 4,
+  },
+  continueButtonDisabled: {
+    opacity: 0.5,
   },
   gradientButton: {
     padding: 15,
-    alignItems: 'center'
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'center',
   },
   buttonText: {
-    color: '#FFF',
+    color: COLORS.text,
     fontSize: 16,
-    fontFamily: 'Kanit_900Black'
+    fontFamily: 'Kanit_900Black',
+    marginRight: 8,
+  },
+  buttonIcon: {
+    marginLeft: 4,
   },
   completionContainer: {
     flex: 1,
     justifyContent: 'center',
-    alignItems: 'center'
+    alignItems: 'center',
+    paddingHorizontal: 20,
   },
   completionText: {
-    color: '#FFF',
+    color: COLORS.text,
     fontSize: 20,
     textAlign: 'center',
     fontFamily: 'SofiaSans_900Black',
-    marginTop: 20
+    marginTop: 20,
+    marginBottom: 30,
+  },
+  loadingIndicator: {
+    width: '100%',
+    height: 8,
+    backgroundColor: COLORS.border,
+    borderRadius: 4,
+    overflow: 'hidden',
+    marginTop: 20,
+  },
+  loadingBar: {
+    height: '100%',
+    backgroundColor: COLORS.primary,
+    borderRadius: 4,
   }
 });
 
