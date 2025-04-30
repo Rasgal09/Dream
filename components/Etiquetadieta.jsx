@@ -20,7 +20,7 @@ export const Etiquetadieta = () => {
 
   const handlePress = () => {
     try {
-      router.push('/(drawer)/DietSurvey');
+      router.push('/(Preg)/DietSurvey');
     } catch (error) {
       console.error("Error en navegación:", error);
     }
