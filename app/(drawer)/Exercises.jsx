@@ -1,9 +1,9 @@
-import { StyleSheet, Text, View, Pressable, TextInput, FlatList, Modal, TouchableOpacity } from 'react-native'
-import { icons } from '../../assets/icons'
+import { StyleSheet, Text, View, Pressable, TextInput, FlatList, Modal, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
+import { icons } from '../../assets/icons';
 import { useNavigation } from 'expo-router';
-import { Colors } from '../../assets/Colors'
-import React, { useState, useEffect } from 'react'
-import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Colors } from '../../assets/Colors';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Ejercicio from '../../components/Ejercicio';
 import { ScrollView } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,78 +13,188 @@ const Exercises = () => {
   const navigation = useNavigation();
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredExercises, setFilteredExercises] = useState([]);
+  const [displayedExercises, setDisplayedExercises] = useState([]);
   const [showFilters, setShowFilters] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [allExercises, setAllExercises] = useState([]);
+  const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
+  const exercisesPerPage = 20;
+
   const [filters, setFilters] = useState({
     muscleGroup: '',
-    difficulty: '',
     equipment: '',
     sortBy: 'name'
   });
 
-  // Datos de ejemplo de ejercicios
-  const exercisesData = [
-    { id: '1', title: 'Hack Squat', muscleGroup: 'Piernas', difficulty: 'Intermedio', equipment: 'Máquina' },
-    { id: '2', title: 'Prensa', muscleGroup: 'Piernas', difficulty: 'Principiante', equipment: 'Máquina' },
-    { id: '3', title: 'Press de banca', muscleGroup: 'Pecho', difficulty: 'Intermedio', equipment: 'Barra' },
-    { id: '4', title: 'Dominada', muscleGroup: 'Espalda', difficulty: 'Avanzado', equipment: 'Barra' },
-    { id: '5', title: 'Curl de bíceps', muscleGroup: 'Brazos', difficulty: 'Principiante', equipment: 'Mancuernas' },
-    { id: '6', title: 'Sentadilla libre', muscleGroup: 'Piernas', difficulty: 'Principiante', equipment: 'Barra' },
-    { id: '7', title: 'Apertura con Mancuernas', muscleGroup: 'Pecho', difficulty: 'Principiante', equipment: 'Mancuernas' },
-    { id: '8', title: 'Flexiones', muscleGroup: 'Pecho', difficulty: 'Principiante', equipment: 'Peso corporal' },
-    { id: '9', title: 'Plancha', muscleGroup: 'Abdomen', difficulty: 'Principiante', equipment: 'Peso corporal' },
-    { id: '10', title: 'Crunch en máquina', muscleGroup: 'Abdomen', difficulty: 'Principiante', equipment: 'Máquina' },
-    { id: '11', title: 'Remo en máquina', muscleGroup: 'Espalda', difficulty: 'Intermedio', equipment: 'Máquina' },
-    { id: '12', title: 'Elevaciones laterales', muscleGroup: 'Brazos', difficulty: 'Intermedio', equipment: 'Mancuernas' },
+  // Traducciones para los filtros
+  const muscleGroups = [
+    { value: '', label: 'Todos' },
+    { value: 'back', label: 'Espalda' },
+    { value: 'cardio', label: 'Cardio' },
+    { value: 'chest', label: 'Pecho' },
+    { value: 'lower arms', label: 'Antebrazos' },
+    { value: 'lower legs', label: 'Pantorrillas' },
+    { value: 'shoulders', label: 'Hombros' },
+    { value: 'upper arms', label: 'Brazos' },
+    { value: 'upper legs', label: 'Piernas' },
+    { value: 'waist', label: 'Cintura' }
   ];
 
-  // Aplicar búsqueda y filtros
-  useEffect(() => {
-    let result = [...exercisesData];
+  const equipmentTypes = [
+    { value: '', label: 'Todos' },
+    { value: 'body weight', label: 'Peso corporal' },
+    { value: 'machine', label: 'Máquina' },
+    { value: 'dumbbell', label: 'Mancuernas' },
+    { value: 'barbell', label: 'Barra' },
+    { value: 'cable', label: 'Polea' },
+    { value: 'kettlebell', label: 'Kettlebell' }
+  ];
+
+  // Obtener ejercicios de la API
+  const fetchExercises = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(
+        'https://exercisedb.p.rapidapi.com/exercises?limit=1000',
+        {
+          method: 'GET',
+          headers: {
+            'X-RapidAPI-Key': 'a6ce31be52msh0865311e56b9f0ep1a9a22jsn79b4d4d83af5',
+            'X-RapidAPI-Host': 'exercisedb.p.rapidapi.com'
+          }
+        }
+      );
+      const data = await response.json();
+      setAllExercises(data);
+      applyFiltersAndSearch(data, filters, searchQuery);
+    } catch (err) {
+      setError('Error al cargar los ejercicios. Intenta más tarde.');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Aplicar filtros y búsqueda
+  const applyFiltersAndSearch = useCallback((exercises, filters, query) => {
+    let result = [...exercises];
     
-    // Aplicar búsqueda por título
-    if (searchQuery) {
+    // Aplicar búsqueda
+    if (query) {
       result = result.filter(exercise => 
-        exercise.title.toLowerCase().includes(searchQuery.toLowerCase())
+        exercise.name.toLowerCase().includes(query.toLowerCase())
       );
     }
     
-    // Aplicar filtros
+    // Aplicar filtro por grupo muscular
     if (filters.muscleGroup) {
-      result = result.filter(exercise => exercise.muscleGroup === filters.muscleGroup);
+      result = result.filter(exercise => 
+        exercise.bodyPart.toLowerCase() === filters.muscleGroup.toLowerCase()
+      );
     }
     
-    if (filters.difficulty) {
-      result = result.filter(exercise => exercise.difficulty === filters.difficulty);
-    }
-    
+    // Aplicar filtro por equipo
     if (filters.equipment) {
-      result = result.filter(exercise => exercise.equipment === filters.equipment);
+      result = result.filter(exercise => 
+        exercise.equipment.toLowerCase() === filters.equipment.toLowerCase()
+      );
     }
     
     // Aplicar ordenamiento
-    switch (filters.sortBy) {
-      case 'name':
-        result.sort((a, b) => a.title.localeCompare(b.title));
-        break;
-      case 'difficulty':
-        const difficultyOrder = { 'Principiante': 1, 'Intermedio': 2, 'Avanzado': 3 };
-        result.sort((a, b) => difficultyOrder[a.difficulty] - difficultyOrder[b.difficulty]);
-        break;
-      default:
-        break;
+    if (filters.sortBy === 'name') {
+      result.sort((a, b) => a.name.localeCompare(b.name));
     }
     
     setFilteredExercises(result);
-  }, [searchQuery, filters]);
+    loadMoreExercises(result, 1); // Resetear paginación
+  }, []);
 
-  const renderExerciseItem = ({ item }) => (
+  // Cargar más ejercicios
+  const loadMoreExercises = (exercises, pageNum) => {
+    const startIndex = (pageNum - 1) * exercisesPerPage;
+    const endIndex = startIndex + exercisesPerPage;
+    const newExercises = exercises.slice(startIndex, endIndex);
+    
+    if (pageNum === 1) {
+      setDisplayedExercises(newExercises);
+    } else {
+      setDisplayedExercises(prev => [...prev, ...newExercises]);
+    }
+    
+    setPage(pageNum);
+    setHasMore(endIndex < exercises.length);
+  };
+
+  // Manejar carga de más ejercicios
+  const handleLoadMore = async () => {
+    if (!isLoadingMore && hasMore) {
+      setIsLoadingMore(true);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      loadMoreExercises(filteredExercises, page + 1);
+      setIsLoadingMore(false);
+    }
+  };
+
+  // Efecto para cargar ejercicios iniciales
+  useEffect(() => {
+    fetchExercises();
+  }, [fetchExercises]);
+
+  // Efecto para aplicar filtros cuando cambian
+  useEffect(() => {
+    if (allExercises.length > 0) {
+      applyFiltersAndSearch(allExercises, filters, searchQuery);
+    }
+  }, [filters, searchQuery, allExercises, applyFiltersAndSearch]);
+
+  // Renderizar item del ejercicio
+  const renderExerciseItem = useCallback(({ item }) => (
     <Ejercicio 
-      title={item.title} 
-      muscleGroup={item.muscleGroup} 
-      difficulty={item.difficulty} 
+      title={item.name} 
+      muscleGroup={item.bodyPart} 
       equipment={item.equipment}
+      gifUrl={item.gifUrl}
+      target={item.target}
+      /* onPress={() => navigation.navigate('ExerciseDetail', { exercise: item })} */
     />
-  );
+  ), []);
+
+  // Renderizar footer de carga
+  const renderFooter = () => {
+    if (!isLoadingMore) return null;
+    return (
+      <View style={{ padding: 20 }}>
+        <ActivityIndicator size="large" color={Colors.text1} />
+      </View>
+    );
+  };
+
+  // Mostrar carga inicial
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color={Colors.text1} />
+      </View>
+    );
+  }
+
+  // Mostrar error
+  if (error) {
+    return (
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <Text style={{ color: Colors.text2, fontSize: 18 }}>{error}</Text>
+        <TouchableOpacity 
+          style={styles.retryButton}
+          onPress={fetchExercises}
+        >
+          <Text style={styles.retryButtonText}>Reintentar</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={{flex: 1, paddingTop: insets.top, paddingBottom: insets.bottom, backgroundColor: Colors.fondos}}>
@@ -115,13 +225,20 @@ const Exercises = () => {
       </View>
 
       {/* Resultados de búsqueda */}
-      {filteredExercises.length > 0 ? (
+      {displayedExercises.length > 0 ? (
         <FlatList
-          data={filteredExercises}
+          data={displayedExercises}
           renderItem={renderExerciseItem}
           keyExtractor={item => item.id}
           contentContainerStyle={styles.listContainer}
           numColumns={2}
+          onEndReached={handleLoadMore}
+          onEndReachedThreshold={0.5}
+          ListFooterComponent={renderFooter}
+          initialNumToRender={10}
+          maxToRenderPerBatch={10}
+          windowSize={21}
+          removeClippedSubviews={true}
         />
       ) : (
         <View style={styles.emptyContainer}>
@@ -150,46 +267,21 @@ const Exercises = () => {
             <View style={styles.filterSection}>
               <Text style={[styles.filterTitle, {color: Colors.text2}]}>Grupo muscular</Text>
               <View style={styles.filterOptions}>
-                {['Piernas', 'Pecho', 'Espalda', 'Brazos', 'Abdomen','Todos'].map(group => (
+                {muscleGroups.map(group => (
                   <TouchableOpacity
-                    key={group}
+                    key={group.value}
                     style={[
                       styles.filterOption,
-                      filters.muscleGroup === (group === 'Todos' ? '' : group) && styles.selectedOption
+                      filters.muscleGroup === group.value && styles.selectedOption
                     ]}
-                    onPress={() => setFilters({...filters, muscleGroup: group === 'Todos' ? '' : group})}
+                    onPress={() => setFilters({...filters, muscleGroup: group.value})}
                   >
                     <Text style={[
                       styles.filterOptionText,
                       {color: Colors.text2},
-                      filters.muscleGroup === (group === 'Todos' ? '' : group) && styles.selectedOptionText
+                      filters.muscleGroup === group.value && styles.selectedOptionText
                     ]}>
-                      {group}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-
-            {/* Filtro por dificultad */}
-            <View style={styles.filterSection}>
-              <Text style={[styles.filterTitle, {color: Colors.text2}]}>Dificultad</Text>
-              <View style={styles.filterOptions}>
-                {['Principiante', 'Intermedio', 'Avanzado', 'Todos'].map(diff => (
-                  <TouchableOpacity
-                    key={diff}
-                    style={[
-                      styles.filterOption,
-                      filters.difficulty === (diff === 'Todos' ? '' : diff) && styles.selectedOption
-                    ]}
-                    onPress={() => setFilters({...filters, difficulty: diff === 'Todos' ? '' : diff})}
-                  >
-                    <Text style={[
-                      styles.filterOptionText,
-                      {color: Colors.text2},
-                      filters.difficulty === (diff === 'Todos' ? '' : diff) && styles.selectedOptionText
-                    ]}>
-                      {diff}
+                      {group.label}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -200,21 +292,21 @@ const Exercises = () => {
             <View style={styles.filterSection}>
               <Text style={[styles.filterTitle, {color: Colors.text2}]}>Equipo necesario</Text>
               <View style={styles.filterOptions}>
-                {['Máquina', 'Barra', 'Mancuernas', 'Peso corporal', 'Todos'].map(eq => (
+                {equipmentTypes.map(equip => (
                   <TouchableOpacity
-                    key={eq}
+                    key={equip.value}
                     style={[
                       styles.filterOption,
-                      filters.equipment === (eq === 'Todos' ? '' : eq) && styles.selectedOption
+                      filters.equipment === equip.value && styles.selectedOption
                     ]}
-                    onPress={() => setFilters({...filters, equipment: eq === 'Todos' ? '' : eq})}
+                    onPress={() => setFilters({...filters, equipment: equip.value})}
                   >
                     <Text style={[
                       styles.filterOptionText,
                       {color: Colors.text2},
-                      filters.equipment === (eq === 'Todos' ? '' : eq) && styles.selectedOptionText
+                      filters.equipment === equip.value && styles.selectedOptionText
                     ]}>
-                      {eq}
+                      {equip.label}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -225,27 +317,21 @@ const Exercises = () => {
             <View style={styles.filterSection}>
               <Text style={[styles.filterTitle, {color: Colors.text2}]}>Ordenar por</Text>
               <View style={styles.sortOptions}>
-                {[
-                  { value: 'name', label: 'Nombre' },
-                  { value: 'difficulty', label: 'Dificultad' },
-                ].map(option => (
-                  <TouchableOpacity
-                    key={option.value}
-                    style={[
-                      styles.sortOption,
-                      filters.sortBy === option.value && styles.selectedSortOption
-                    ]}
-                    onPress={() => setFilters({...filters, sortBy: option.value})}
-                  >
-                    <Text style={[
-                      styles.sortOptionText,
-                      {color: Colors.text2},
-                      filters.sortBy === option.value && styles.selectedSortOptionText
-                    ]}>
-                      {option.label}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                <TouchableOpacity
+                  style={[
+                    styles.sortOption,
+                    filters.sortBy === 'name' && styles.selectedSortOption
+                  ]}
+                  onPress={() => setFilters({...filters, sortBy: 'name'})}
+                >
+                  <Text style={[
+                    styles.sortOptionText,
+                    {color: Colors.text2},
+                    filters.sortBy === 'name' && styles.selectedSortOptionText
+                  ]}>
+                    Nombre
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
 
@@ -255,7 +341,6 @@ const Exercises = () => {
               onPress={() => {
                 setFilters({
                   muscleGroup: '',
-                  difficulty: '',
                   equipment: '',
                   sortBy: 'name'
                 });
@@ -267,8 +352,8 @@ const Exercises = () => {
         </View>
       </Modal>
     </View>
-  )
-}
+  );
+};
 
 export default Exercises
 
@@ -309,7 +394,7 @@ const styles = StyleSheet.create({
     padding: 5,
   },
   listContainer: {
-    padding: 10,
+    padding: 8,
   },
   emptyContainer: {
     flex: 1,
@@ -398,6 +483,17 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   clearFiltersText: {
+    color: Colors.text1,
+    fontFamily: 'Kanit',
+    fontSize: 16,
+  },
+  retryButton: {
+    marginTop: 20,
+    padding: 15,
+    backgroundColor: Colors.fondos2,
+    borderRadius: 10,
+  },
+  retryButtonText: {
     color: Colors.text1,
     fontFamily: 'Kanit',
     fontSize: 16,
