@@ -201,7 +201,7 @@ const RegistroCompleto = () => {
           altura: selectedHeight
         };
   
-            axios.post('http://10.33.25.184:3000/registro', userData).then(response => {
+            axios.post('http://10.33.25.219:3000/registro', userData).then(response => {
             console.log('Registro exitoso:', response.data);
             router.push('/home');
           })
