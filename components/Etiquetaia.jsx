@@ -20,7 +20,7 @@ export const Etiquetaia = () => {
 
   const handlePress = () => {
     try {
-      router.push('/(drawer)/PreExcer');
+      router.push('/(Preg)/PreExcer');
     } catch (error) {
       console.error("Error en navegación:", error);
     }
