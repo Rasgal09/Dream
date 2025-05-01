@@ -1,222 +1,130 @@
-import { StyleSheet, Text, TouchableOpacity, View, ScrollView, Dimensions } from "react-native";
-import { useState } from "react";
-import { Colors } from "../assets/Colors";
+import { useState, useEffect } from "react";
+import { 
+  View, 
+  Text, 
+  TouchableOpacity, 
+  ScrollView, 
+  StyleSheet,
+  Dimensions 
+} from "react-native";
+import { LineChart } from "react-native-chart-kit";
+import { useNavigation, DrawerActions } from "@react-navigation/native";
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuth } from "../app/context/AuthContext";
+import axios from "axios";
 import { Userprofile } from "../assets/Userprofile";
 import { icons } from "../assets/icons";
-import { useNavigation, DrawerActions } from "@react-navigation/native";
-import { LineChart } from "react-native-chart-kit";
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Colors } from "../assets/Colors";
 
 const screenWidth = Dimensions.get("window").width;
 
-// Función para calcular IMC (peso en kg, altura en cm)
-const calcularIMC = (peso, altura) => {
-  const alturaEnMetros = altura / 100;
-  return (peso / (alturaEnMetros * alturaEnMetros)).toFixed(1);
-};
-
-// Datos de ejemplo del usuario
-const datosUsuario = {
-  nombre: "Usuario de Ejemplo",
-  edad: 21,
-  altura: 173, // en cm
-  historial: {
-    fechas: ["Ene", "Feb", "Mar", "Abr", "May", "Jun"],
-    peso: [75, 78, 76, 74, 73.5, 70],
-    grasaCorporal: [22, 21, 20.5, 19.8, 19, 18.5],
-    masaMuscular: [33, 33.5, 34, 34.5, 35, 35.5],
-  },
-};
-
-// Calcular IMC histórico basado en peso y altura
-const imcHistorico = datosUsuario.historial.peso.map(peso => 
-  parseFloat(calcularIMC(peso, datosUsuario.altura))
-);
-
-// Añadir IMC calculado al historial
-datosUsuario.historial.imc = imcHistorico;
-
-// Calcular valores actuales
-const pesoActual = datosUsuario.historial.peso[datosUsuario.historial.peso.length - 1];
-const grasaActual = datosUsuario.historial.grasaCorporal[datosUsuario.historial.grasaCorporal.length - 1];
-const musculoActual = datosUsuario.historial.masaMuscular[datosUsuario.historial.masaMuscular.length - 1];
-const imcActual = parseFloat(calcularIMC(pesoActual, datosUsuario.altura));
-
-const estadoIMC = (imc) => {
-  const imcNum = parseFloat(imc);
-  if (imcNum < 18.5) return { texto: "Bajo peso", color: "#FFC107" };
-  if (imcNum < 25) return { texto: "Peso normal", color: "#4CAF50" };
-  if (imcNum < 30) return { texto: "Sobrepeso", color: "#FF9800" };
-  return { texto: "Obesidad", color: "#F44336" };
-};
-
 export const CompUser = () => {
+  const { userData } = useAuth();
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const [metricaActiva, setMetricaActiva] = useState("peso");
+  const [historialPeso, setHistorialPeso] = useState([]);
+
+  // Obtener historial de peso
+  useEffect(() => {
+    const fetchProgreso = async () => {
+      try {
+        const response = await axios.get('http://192.168.1.126:3000/progreso', {
+          headers: { Authorization: `Bearer ${userData.token}` }
+        });
+        setHistorialPeso(response.data);
+      } catch (error) {
+        console.error("Error al obtener progreso:", error);
+      }
+    };
+    
+    if (userData) fetchProgreso();
+  }, [userData]);
+
+  // Calcular IMC
+  const calcularIMC = () => {
+    if (!userData?.peso || !userData?.altura) return 0;
+    const alturaEnMetros = userData.altura / 100;
+    return (userData.peso / (alturaEnMetros * alturaEnMetros)).toFixed(1);
+  };
+
+  const imcActual = parseFloat(calcularIMC());
+  const pesoActual = userData?.peso || 0;
+
+  // Configuración del gráfico
+  const chartConfig = {
+    backgroundGradientFrom: "#1E1E1E",
+    backgroundGradientTo: "#1E1E1E",
+    decimalPlaces: 1,
+    color: (opacity = 1) => `rgba(0, 208, 120, ${opacity})`,
+    labelColor: (opacity = 1) => `rgba(255, 255, 255, ${opacity})`,
+    propsForDots: { r: "4", strokeWidth: "2", stroke: "#fff" }
+  };
+
+  const datosGrafica = {
+    labels: historialPeso.map((_, index) => `Mes ${index + 1}`),
+    datasets: [{
+      data: historialPeso.map(item => item.peso),
+    }]
+  };
+
+  // Estado del IMC
+  const estadoIMC = () => {
+    if (imcActual < 18.5) return "Bajo peso";
+    if (imcActual < 25) return "Peso normal";
+    if (imcActual < 30) return "Sobrepeso";
+    return "Obesidad";
+  };
 
   const handleMenuPress = () => {
     navigation.dispatch(DrawerActions.openDrawer());
   };
 
-  const chartConfig = {
-    backgroundGradientFrom: Colors.fondos2,
-    backgroundGradientTo: Colors.fondos2,
-    decimalPlaces: 1,
-    color: (opacity = 1) => {
-      switch (metricaActiva) {
-        case "peso": return `rgba(65, 105, 225, ${opacity})`;
-        case "grasa": return `rgba(255, 99, 71, ${opacity})`;
-        case "musculo": return `rgba(46, 139, 87, ${opacity})`;
-        case "imc": return `rgba(138, 43, 226, ${opacity})`;
-        default: return `rgba(0, 0, 0, ${opacity})`;
-      }
-    },
-    labelColor: (opacity = 1) => Colors.text1,
-    style: { borderRadius: 16 },
-    propsForDots: { r: "6", strokeWidth: "2", stroke: Colors.text1 },
-  };
-
-  const getDatosGrafica = () => ({
-    labels: datosUsuario.historial.fechas,
-    datasets: [{
-      data: metricaActiva === "peso" ? datosUsuario.historial.peso :
-            metricaActiva === "grasa" ? datosUsuario.historial.grasaCorporal :
-            metricaActiva === "musculo" ? datosUsuario.historial.masaMuscular :
-            datosUsuario.historial.imc,
-      color: (opacity = 1) => chartConfig.color(opacity),
-      strokeWidth: 2,
-    }],
-    legend: [metricaActiva === "peso" ? "Peso (kg)" :
-             metricaActiva === "grasa" ? "Grasa Corporal (%)" :
-             metricaActiva === "musculo" ? "Masa Muscular (kg)" : "IMC"],
-  });
-
-  const getTituloGrafica = () => {
-    switch (metricaActiva) {
-      case "peso": return "Progreso de Peso";
-      case "grasa": return "Progreso de Grasa Corporal";
-      case "musculo": return "Progreso de Masa Muscular";
-      case "imc": return "Progreso de IMC";
-      default: return "Progreso";
-    }
-  };
-
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <ScrollView 
-        contentContainerStyle={[styles.scrollContainer, { paddingBottom: insets.bottom + 20 }]}
-        showsVerticalScrollIndicator={false}
-      >
+    <View style={{ flex: 1, paddingTop: insets.top }}>
+      <ScrollView>
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity 
-            style={styles.menuButton} 
-            onPress={handleMenuPress}
-          >
-            <icons.Menu color={Colors.text1} />
+        <View>
+          <TouchableOpacity onPress={handleMenuPress}>
+            <icons.Menu color="#FFF" />
           </TouchableOpacity>
           
-          <Userprofile style={styles.avatar} />
+          <Userprofile />
           
-          <View style={styles.userInfo}>
-            <Text style={styles.userName}>{datosUsuario.nombre}</Text>
-            <Text style={styles.userDetails}>
-              {datosUsuario.edad} años • {datosUsuario.altura} cm
-            </Text>
-            <View style={[styles.imcBadge, { backgroundColor: estadoIMC(imcActual).color }]}>
-              <Text style={styles.imcText}>{estadoIMC(imcActual).texto}</Text>
-            </View>
+          <View>
+            <Text>{userData?.nombre || "Usuario"}</Text>
+            <Text>{userData?.altura || 0} cm</Text>
+            <Text>IMC: {imcActual} ({estadoIMC()})</Text>
           </View>
         </View>
 
-        {/* Metric Cards */}
-        <View style={styles.metricsGrid}>
-          <TouchableOpacity
-            style={[styles.metricCard, metricaActiva === "peso" && styles.activeCard]}
-            onPress={() => setMetricaActiva("peso")}
-          >
-            <Text style={styles.metricValue}>{pesoActual}</Text>
-            <Text style={styles.metricUnit}>kg</Text>
-            <Text style={styles.metricLabel}>Peso</Text>
+        {/* Tarjetas de métricas */}
+        <View>
+          <TouchableOpacity onPress={() => setMetricaActiva("peso")}>
+            <Text>{pesoActual} kg</Text>
+            <Text>Peso actual</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            style={[styles.metricCard, metricaActiva === "grasa" && styles.activeCard]}
-            onPress={() => setMetricaActiva("grasa")}
-          >
-            <Text style={styles.metricValue}>{grasaActual}</Text>
-            <Text style={styles.metricUnit}>%</Text>
-            <Text style={styles.metricLabel}>Grasa</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.metricCard, metricaActiva === "musculo" && styles.activeCard]}
-            onPress={() => setMetricaActiva("musculo")}
-          >
-            <Text style={styles.metricValue}>{musculoActual}</Text>
-            <Text style={styles.metricUnit}>kg</Text>
-            <Text style={styles.metricLabel}>Músculo</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.metricCard, metricaActiva === "imc" && styles.activeCard]}
-            onPress={() => setMetricaActiva("imc")}
-          >
-            <Text style={styles.metricValue}>{imcActual}</Text>
-            <Text style={styles.metricUnit}>IMC</Text>
-            <Text style={styles.metricLabel}>Índice</Text>
+          <TouchableOpacity onPress={() => setMetricaActiva("imc")}>
+            <Text>{imcActual}</Text>
+            <Text>IMC</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Chart */}
-        <View style={styles.chartSection}>
-          <Text style={styles.sectionTitle}>{getTituloGrafica()}</Text>
-          <Text style={styles.sectionSubtitle}>Últimos 6 meses</Text>
-          
-          <LineChart
-            data={getDatosGrafica()}
-            width={screenWidth - 40}
-            height={220}
-            chartConfig={chartConfig}
-            bezier
-            style={styles.chart}
-          />
-        </View>
+        {/* Gráfico */}
+        <LineChart
+          data={datosGrafica}
+          width={screenWidth - 20}
+          height={220}
+          chartConfig={chartConfig}
+          bezier
+        />
 
-        {/* Progress Summary */}
-        <View style={styles.summarySection}>
-          <Text style={styles.sectionTitle}>Resumen de Progreso</Text>
-          
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Desde el inicio:</Text>
-            <Text style={styles.summaryValue}>
-              {metricaActiva === "peso" ? `${(datosUsuario.historial.peso[0] - pesoActual).toFixed(1)} kg` :
-               metricaActiva === "grasa" ? `${(datosUsuario.historial.grasaCorporal[0] - grasaActual).toFixed(1)}%` :
-               metricaActiva === "musculo" ? `+${(musculoActual - datosUsuario.historial.masaMuscular[0]).toFixed(1)} kg` :
-               `${(datosUsuario.historial.imc[0] - imcActual).toFixed(1)} puntos`}
-            </Text>
-          </View>
-
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Cambio mensual promedio:</Text>
-            <Text style={styles.summaryValue}>
-              {metricaActiva === "peso" ? `${((datosUsuario.historial.peso[0] - pesoActual) / 5).toFixed(2)} kg` :
-               metricaActiva === "grasa" ? `${((datosUsuario.historial.grasaCorporal[0] - grasaActual) / 5).toFixed(2)}%` :
-               metricaActiva === "musculo" ? `+${((musculoActual - datosUsuario.historial.masaMuscular[0]) / 5).toFixed(2)} kg` :
-               `${((datosUsuario.historial.imc[0] - imcActual) / 5).toFixed(2)} puntos`}
-            </Text>
-          </View>
-
-          <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>Último mes:</Text>
-            <Text style={styles.summaryValue}>
-              {metricaActiva === "peso" ? `${(datosUsuario.historial.peso[4] - pesoActual).toFixed(1)} kg` :
-               metricaActiva === "grasa" ? `${(datosUsuario.historial.grasaCorporal[4] - grasaActual).toFixed(1)}%` :
-               metricaActiva === "musculo" ? `+${(musculoActual - datosUsuario.historial.masaMuscular[4]).toFixed(1)} kg` :
-               `${(datosUsuario.historial.imc[4] - imcActual).toFixed(1)} puntos`}
-            </Text>
-          </View>
+        {/* Resumen */}
+        <View>
+          <Text>Resumen de Progreso</Text>
+          <Text>Peso inicial: {historialPeso[0]?.peso || 0} kg</Text>
+          <Text>Cambio total: {(pesoActual - (historialPeso[0]?.peso || 0)).toFixed(1)} kg</Text>
         </View>
 
         {/* Tips */}

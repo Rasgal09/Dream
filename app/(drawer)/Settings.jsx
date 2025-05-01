@@ -1,16 +1,15 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   View,
   Text,
-  StyleSheet,
   Pressable,
   Switch,
   TextInput,
+  StyleSheet,
   Modal,
   Alert,
   FlatList,
-  StatusBar,
-  ActivityIndicator,
+  ActivityIndicator
 } from "react-native"
 import { LinearGradient } from "expo-linear-gradient"
 import { Ionicons, MaterialIcons, Feather, FontAwesome } from "@expo/vector-icons"
@@ -19,164 +18,212 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Kanit_400Regular, Kanit_500Medium, Kanit_700Bold, useFonts } from "@expo-google-fonts/kanit"
 import { SofiaSans_400Regular, SofiaSans_500Medium } from "@expo-google-fonts/sofia-sans"
 import { Colors } from "../../assets/Colors"
+import { useAuth } from '../context/AuthContext'
+import { router } from "expo-router"
+import axios from "axios"
 
-
-// Definición de secciones para FlatList
 const createSettingsSections = () => [
-  {
-    id: "account",
-    title: "Cuenta",
-    type: "section",
-  },
-  {
-    id: "accountCard",
-    type: "accountCard",
-  },
-  {
-    id: "appearance",
-    title: "Apariencia",
-    type: "section",
-  },
-  {
-    id: "darkModeCard",
-    type: "darkModeCard",
-  },
-  {
-    id: "themeCard",
-    type: "themeCard",
-  },
-  {
-    id: "preferences",
-    title: "Preferencias",
-    type: "section",
-  },
-  {
-    id: "preferencesCard",
-    type: "preferencesCard",
-  },
-  {
-    id: "help",
-    title: "Ayuda y Soporte",
-    type: "section",
-  },
-  {
-    id: "helpCard",
-    type: "helpCard",
-  },
-  {
-    id: "logout",
-    type: "logout",
-  },
-  {
-    id: "version",
-    type: "version",
-  },
+  { id: "account", title: "Cuenta", type: "section" },
+  { id: "accountCard", type: "accountCard" },
+  { id: "appearance", title: "Apariencia", type: "section" },
+  { id: "darkModeCard", type: "darkModeCard" },
+  { id: "themeCard", type: "themeCard" },
+  { id: "preferences", title: "Preferencias", type: "section" },
+  { id: "preferencesCard", type: "preferencesCard" },
+  { id: "help", title: "Ayuda y Soporte", type: "section" },
+  { id: "helpCard", type: "helpCard" },
+  { id: "logout", type: "logout" },
+  { id: "version", type: "version" }
 ]
 
-const SettingsScreen = ({ navigation }) => {
+const SettingsScreen = () => {
+  const { userData, signOut, updateUserData } = useAuth()
   const insets = useSafeAreaInsets()
   const deviceTheme = useColorScheme()
-  const [theme, setTheme] = useState("system") // 'light', 'dark', 'system'
+  
+  const [theme, setTheme] = useState("system")
   const [isDarkMode, setIsDarkMode] = useState(false)
   const [emailModalVisible, setEmailModalVisible] = useState(false)
   const [passwordModalVisible, setPasswordModalVisible] = useState(false)
+  const [nameModalVisible, setNameModalVisible] = useState(false)
+  const [weightModalVisible, setWeightModalVisible] = useState(false)
+  
   const [newEmail, setNewEmail] = useState("")
   const [currentPassword, setCurrentPassword] = useState("")
   const [newPassword, setNewPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
+  const [tempName, setTempName] = useState("")
+  const [tempWeight, setTempWeight] = useState("")
+  
   const [notifications, setNotifications] = useState(true)
-  const [language, setLanguage] = useState("Español")
-  const [units, setUnits] = useState("Métrico") // Métrico o Imperial
   const [settingsSections] = useState(createSettingsSections())
 
-  // Cargar fuentes usando el hook de Expo Google Fonts
+  const [language, setLanguage] = useState("Español"); // Añade esto
+  const [units, setUnits] = useState("Métrico"); // Asegúrate que existe
+
   const [fontsLoaded] = useFonts({
     Kanit_400Regular,
     Kanit_500Medium,
     Kanit_700Bold,
     SofiaSans_400Regular,
-    SofiaSans_500Medium,
+    SofiaSans_500Medium
   })
 
-  // Función para cambiar el tema
-  const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode)
-    setTheme(isDarkMode ? "light" : "dark")
-  }
+  useEffect(() => {
+    if (userData) {
+      setTempName(userData.nombre || "")
+      setTempWeight(userData.peso?.toString() || "")
+    }
+  }, [userData])
 
-  // Función para seleccionar un tema específico
+  const toggleDarkMode = () => setIsDarkMode(!isDarkMode)
+  
   const selectTheme = (selectedTheme) => {
     setTheme(selectedTheme)
-    if (selectedTheme === "dark") {
-      setIsDarkMode(true)
-    } else if (selectedTheme === "light") {
-      setIsDarkMode(false)
-    } else {
-      // Si es 'system', usar el tema del dispositivo
-      setIsDarkMode(deviceTheme === "dark")
+    setIsDarkMode(selectedTheme === "dark" || (selectedTheme === "system" && deviceTheme === "dark"))
+  }
+
+  const handleNameUpdate = async () => {
+    if (!tempName.trim()) return Alert.alert("Error", "Nombre no válido");
+    
+    try {
+      const response = await axios.put(
+        `http://192.168.1.126:3000/users/${userData.id}`,
+        { nombre: tempName }, 
+        { headers: { Authorization: `Bearer ${userData.token}` } ,
+        "Content-Type": "application/json" }
+      );
+  
+      if (response.data.success) {
+        // Actualiza el contexto y AsyncStorage
+        const updatedUser = { ...userData, nombre: tempName };
+        await updateUserData(updatedUser);
+        setNameModalVisible(false);
+        Alert.alert("Éxito", "Nombre actualizado");
+      }
+    } catch (error) {
+      Alert.alert("Error", error.response?.data?.error || "Error al actualizar");
+    }
+  };
+  
+  const handleWeightUpdate = async () => {
+    const rawWeight = tempWeight.trim();
+  
+    if (!rawWeight) {
+      Alert.alert("Error", "Ingresa un peso válido");
+      return;
+    }
+
+    const weight = parseFloat(rawWeight);
+  
+    if (isNaN(weight)) return Alert.alert("Error", "Peso no válido");
+    
+    try {
+      const response = await axios.put(
+        `http://192.168.1.126:3000/users/${userData.id}`,
+        { peso: weight },
+        { headers: { Authorization: `Bearer ${userData.token}` } ,
+        "Content-Type": "application/json" }
+      );
+  
+      if (response.data.success) {
+        const updatedUser = { ...userData, peso: weight };
+        await updateUserData(updatedUser);
+        setWeightModalVisible(false);
+        Alert.alert("Éxito", "Peso actualizado");
+      }
+    } catch (error) {
+      Alert.alert("Error", error.response?.data?.error || "Error al actualizar");
+    }
+  };
+
+  const handleEmailChange = async () => {
+    if (!newEmail.trim()) return Alert.alert("Error", "Email no válido")
+    
+    try {
+      const response = await axios.put(`http://192.168.1.126:3000/users/${userData.id}/email`, 
+        { newEmail, currentPassword },
+        { headers: { Authorization: `Bearer ${userData.token}` } }
+      )
+      
+      if (response.data.success) {
+        updateUserData({ ...userData, email: newEmail })
+        setEmailModalVisible(false)
+      }
+    } catch (error) {
+      Alert.alert("Error", error.response?.data?.error || "Error al actualizar")
     }
   }
 
-  // Función para cambiar el correo
-  const handleEmailChange = () => {
-    if (newEmail.trim() === "") {
-      Alert.alert("Error", "Por favor ingresa un correo válido")
-      return
+  const handlePasswordChange = async () => {
+    if (newPassword !== confirmPassword) return Alert.alert("Error", "Contraseñas no coinciden")
+    
+    try {
+      const response = await axios.put(`http://192.168.1.126:3000/users/${userData.id}/password`, 
+        { currentPassword, newPassword },
+        { headers: { Authorization: `Bearer ${userData.token}` } }
+      )
+      
+      if (response.data.success) {
+        setPasswordModalVisible(false)
+        Alert.alert("Éxito", "Contraseña actualizada")
+      }
+    } catch (error) {
+      Alert.alert("Error", error.response?.data?.error || "Error al actualizar")
     }
-
-    // Aquí iría la lógica para cambiar el correo en la base de datos
-    Alert.alert("Éxito", "Tu correo ha sido actualizado correctamente")
-    setEmailModalVisible(false)
-    setNewEmail("")
   }
 
-  // Función para cambiar la contraseña
-  const handlePasswordChange = () => {
-    if (currentPassword.trim() === "" || newPassword.trim() === "" || confirmPassword.trim() === "") {
-      Alert.alert("Error", "Por favor completa todos los campos")
-      return
-    }
-
-    if (newPassword !== confirmPassword) {
-      Alert.alert("Error", "Las contraseñas no coinciden")
-      return
-    }
-
-    // Aquí iría la lógica para cambiar la contraseña en la base de datos
-    Alert.alert("Éxito", "Tu contraseña ha sido actualizada correctamente")
-    setPasswordModalVisible(false)
-    setCurrentPassword("")
-    setNewPassword("")
-    setConfirmPassword("")
-  }
-
-  // Función para cerrar sesión
   const handleLogout = () => {
-    Alert.alert("Cerrar sesión", "¿Estás seguro que deseas cerrar sesión?", [
-      {
-        text: "Cancelar",
-        style: "cancel",
-      },
-      {
-        text: "Sí, cerrar sesión",
+    Alert.alert("Cerrar sesión", "¿Estás seguro?", [
+      { text: "Cancelar" },
+      { 
+        text: "Sí", 
         onPress: () => {
-          // Aquí iría la lógica para cerrar sesión
-          console.log("Usuario cerró sesión")
-        },
-      },
+          signOut()
+          router.replace("/(auth)/Cuenta")
+        }
+      }
     ])
   }
 
-  // Renderizar cada tipo de elemento
   const renderItem = ({ item }) => {
     switch (item.type) {
-      case "section":
-        return <Text style={styles.sectionTitle}>{item.title}</Text>
-
       case "accountCard":
         return (
           <View style={styles.card}>
-            <Pressable
+            <Pressable 
+              style={({ pressed }) => [styles.settingItem, pressed && styles.pressedItem]}
+              onPress={() => setNameModalVisible(true)}
+            >
+              <View style={styles.settingIconContainer}>
+                <MaterialIcons name="person" size={22} color={Colors.text1} />
+              </View>
+              <View style={styles.settingTextContainer}>
+                <Text style={styles.settingLabel}>Nombre</Text>
+                <Text style={styles.settingValue}>
+                  {userData?.nombre || "Nombre no especificado"}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={22} color={Colors.text1} />
+            </Pressable>
+
+            <Pressable 
+              style={({ pressed }) => [styles.settingItem, pressed && styles.pressedItem]}
+              onPress={() => setWeightModalVisible(true)}
+            >
+              <View style={styles.settingIconContainer}>
+                <FontAwesome name="weight" size={22} color={Colors.text1} />
+              </View>
+              <View style={styles.settingTextContainer}>
+                <Text style={styles.settingLabel}>Peso</Text>
+                <Text style={styles.settingValue}>
+                  {userData?.peso ? `${userData.peso} kg` : "Peso no especificado"}
+                </Text>
+              </View>
+              <Ionicons name="chevron-forward" size={22} color={Colors.text1} />
+            </Pressable>
+
+            <Pressable 
               style={({ pressed }) => [styles.settingItem, pressed && styles.pressedItem]}
               onPress={() => setEmailModalVisible(true)}
             >
@@ -184,28 +231,15 @@ const SettingsScreen = ({ navigation }) => {
                 <MaterialIcons name="email" size={22} color={Colors.text1} />
               </View>
               <View style={styles.settingTextContainer}>
-                <Text style={styles.settingLabel}>Cambiar correo electrónico</Text>
-                <Text style={styles.settingValue}>usuario@ejemplo.com</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={22} color={Colors.text1} />
-            </Pressable>
-
-            <Pressable
-              style={({ pressed }) => [styles.settingItem, pressed && styles.pressedItem]}
-              onPress={() => setPasswordModalVisible(true)}
-            >
-              <View style={styles.settingIconContainer}>
-                <Feather name="lock" size={22} color={Colors.text1} />
-              </View>
-              <View style={styles.settingTextContainer}>
-                <Text style={styles.settingLabel}>Cambiar contraseña</Text>
-                <Text style={styles.settingValue}>••••••••</Text>
+                <Text style={styles.settingLabel}>Correo electrónico</Text>
+                <Text style={styles.settingValue}>
+                  {userData?.correo || "usuario@ejemplo.com"}
+                </Text>
               </View>
               <Ionicons name="chevron-forward" size={22} color={Colors.text1} />
             </Pressable>
           </View>
         )
-
       case "darkModeCard":
         return (
           <View style={styles.card}>
@@ -289,48 +323,53 @@ const SettingsScreen = ({ navigation }) => {
           </View>
         )
 
-      case "preferencesCard":
-        return (
-          <View style={styles.card}>
-            <View style={styles.settingItem}>
-              <View style={styles.settingIconContainer}>
-                <Ionicons name="notifications" size={22} color={Colors.text1} />
+        case "preferencesCard":
+          return (
+            <View style={styles.card}>
+              <View style={styles.settingItem}>
+                <View style={styles.settingIconContainer}>
+                  <Ionicons name="notifications" size={22} color={Colors.text1} />
+                </View>
+                <View style={styles.settingTextContainer}>
+                  <Text style={styles.settingLabel}>Notificaciones</Text>
+                </View>
+                <Switch
+                  trackColor={{ false: "#767577", true: Colors.grad1 }}
+                  thumbColor={notifications ? Colors.text2 : "#f4f3f4"}
+                  value={notifications}
+                  onValueChange={() => setNotifications(!notifications)}
+                />
               </View>
-              <View style={styles.settingTextContainer}>
-                <Text style={styles.settingLabel}>Notificaciones</Text>
-              </View>
-              <Switch
-                trackColor={{ false: "#767577", true: Colors.grad1 }}
-                thumbColor={notifications ? Colors.text2 : "#f4f3f4"}
-                ios_backgroundColor="#3e3e3e"
-                onValueChange={() => setNotifications(!notifications)}
-                value={notifications}
-              />
+
+              <Pressable 
+                style={({ pressed }) => [styles.settingItem, pressed && styles.pressedItem]}
+                onPress={() => {/* Lógica para cambiar idioma */}}
+              >
+                <View style={styles.settingIconContainer}>
+                  <Ionicons name="language" size={22} color={Colors.text1} />
+                </View>
+                <View style={styles.settingTextContainer}>
+                  <Text style={styles.settingLabel}>Idioma</Text>
+                  <Text style={styles.settingValue}>{language}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={22} color={Colors.text1} />
+              </Pressable>
+
+              <Pressable 
+                style={({ pressed }) => [styles.settingItem, pressed && styles.pressedItem]}
+                onPress={() => {/* Lógica para cambiar unidades */}}
+              >
+                <View style={styles.settingIconContainer}>
+                  <FontAwesome name="balance-scale" size={22} color={Colors.text1} />
+                </View>
+                <View style={styles.settingTextContainer}>
+                  <Text style={styles.settingLabel}>Unidades de medida</Text>
+                  <Text style={styles.settingValue}>{units}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={22} color={Colors.text1} />
+              </Pressable>
             </View>
-
-            <Pressable style={({ pressed }) => [styles.settingItem, pressed && styles.pressedItem]}>
-              <View style={styles.settingIconContainer}>
-                <Ionicons name="language" size={22} color={Colors.text1} />
-              </View>
-              <View style={styles.settingTextContainer}>
-                <Text style={styles.settingLabel}>Idioma</Text>
-                <Text style={styles.settingValue}>{language}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={22} color={Colors.text1} />
-            </Pressable>
-
-            <Pressable style={({ pressed }) => [styles.settingItem, pressed && styles.pressedItem]}>
-              <View style={styles.settingIconContainer}>
-                <FontAwesome name="balance-scale" size={22} color={Colors.text1} />
-              </View>
-              <View style={styles.settingTextContainer}>
-                <Text style={styles.settingLabel}>Unidades de medida</Text>
-                <Text style={styles.settingValue}>{units}</Text>
-              </View>
-              <Ionicons name="chevron-forward" size={22} color={Colors.text1} />
-            </Pressable>
-          </View>
-        )
+          )
 
       case "helpCard":
         return (
@@ -389,36 +428,66 @@ const SettingsScreen = ({ navigation }) => {
     }
   }
 
-  if (!fontsLoaded) {
-    return (
-      <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
-        <ActivityIndicator size="large" color={Colors.grad1} />
-      </View>
-    )
-  }
+  if (!fontsLoaded) return <ActivityIndicator size="large" />
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top, paddingBottom: insets.bottom }]}>
-      <StatusBar barStyle="light" backgroundColor={Colors.fondos2} />
+    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={styles.header}>
+      <Pressable onPress={() => router.back()} style={styles.backButton}>
+        <Ionicons name="chevron-back" size={28} color={Colors.text2} />
+      </Pressable>
+      <Text style={styles.headerTitle}>Configuración</Text>
+    </View>
 
-      {/* Header */}
-      <View style={styles.header}>
-        <Pressable
-          style={({ pressed }) => [styles.backButton, pressed && { opacity: 0.7 }]}
-          onPress={() => navigation.goBack()}
-        >
-          <Ionicons name="chevron-back" size={28} color={Colors.text2} />
-        </Pressable>
-        <Text style={styles.headerTitle}>Configuración</Text>
-      </View>
+    <FlatList
+      data={settingsSections}
+      renderItem={renderItem}
+      keyExtractor={(item) => item.id}
+      contentContainerStyle={styles.listContainer}
+    />
 
-      <FlatList
-        data={settingsSections}
-        renderItem={renderItem}
-        keyExtractor={(item) => item.id}
-        showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.listContainer}
-      />
+      {/* Modales */}
+      <Modal visible={nameModalVisible} onRequestClose={() => setNameModalVisible(false)}>
+        <View style={styles.modalContainer}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Editar Nombre</Text>
+            <TextInput
+              style={styles.input}
+              value={tempName}
+              onChangeText={setTempName}
+              placeholder="Nuevo nombre"
+            />
+            <View style={styles.modalButtons}>
+              <Pressable onPress={() => setNameModalVisible(false)}>
+                <Text style={styles.modalButtonText}>Cancelar</Text>
+              </Pressable>
+              <Pressable onPress={handleNameUpdate}>
+                <Text style={styles.modalButtonText}>Guardar</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={weightModalVisible} onRequestClose={() => setWeightModalVisible(false)}>
+        <View>
+          <Text>Editar Peso</Text>
+          <TextInput
+            value={tempWeight}
+            onChangeText={setTempWeight}
+            placeholder="Peso en kg"
+            keyboardType="numeric"
+          />
+          <View>
+            <Pressable onPress={() => setWeightModalVisible(false)}>
+              <Text>Cancelar</Text>
+            </Pressable>
+            <Pressable onPress={handleWeightUpdate}>
+              <Text>Guardar</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
 
       {/* Modal para cambiar correo */}
       <Modal

@@ -1,50 +1,51 @@
-import { useState } from 'react';
-import { StyleSheet, Text, View, TextInput, Pressable, Alert } from 'react-native';
-import { Link, router } from 'expo-router';
-import axios from 'axios';
-import { useFonts, SofiaSans_900Black } from '@expo-google-fonts/sofia-sans';
-import { Kanit_900Black } from '@expo-google-fonts/kanit';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Logo } from '../../components/Logo';
-import { Colors } from '../../assets/Colors';
+import { useState } from 'react'
+import { StyleSheet, Text, View, TextInput, Pressable, Alert } from 'react-native'
+import { Link, router } from 'expo-router'
+import axios from 'axios'
+import { useFonts, SofiaSans_900Black } from '@expo-google-fonts/sofia-sans'
+import { Kanit_900Black } from '@expo-google-fonts/kanit'
+import { LinearGradient } from 'expo-linear-gradient'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { Logo } from '../../components/Logo'
+import { Colors } from '../../assets/Colors'
+import { useAuth } from '../context/AuthContext'
 
 const Session = () => {
-  const [correo, setCorreo] = useState('');
-  const [contrasena, setContrasena] = useState('');
-  const [cargando, setCargando] = useState(false);
-  const insets = useSafeAreaInsets();
+  const [correo, setCorreo] = useState('')
+  const [contrasena, setContrasena] = useState('')
+  const [cargando, setCargando] = useState(false)
+  const insets = useSafeAreaInsets()
+  const { signIn } = useAuth()
 
   const [fontsLoaded] = useFonts({
     SofiaSans_900Black,
     Kanit_900Black
-  });
+  })
 
   const handleLogin = async () => {
-    if (!correo || !contrasena) {
-      Alert.alert('Error', 'Por favor completa todos los campos');
-      return;
-    }
-
-    setCargando(true);
-
     try {
-      const response = await axios.post('http://10.33.25.184:3000/login', {
-        correo,
-        contrasena
-      });
+      // En tu handleLogin (Session.jsx)
+    const response = await axios.post('http://10.33.25.219:3000/login', {
+      correo,
+      contrasena
+    });
 
-      if (response.data.success) {
-        router.replace('/Home');
-      }
+    if (response.data.success) {
+      await signIn(response.data.token, {
+        id: response.data.usuario.id,
+        nombre: response.data.usuario.nombre,
+        correo: response.data.usuario.correo,
+        peso: response.data.usuario.peso,
+        altura: response.data.usuario.altura
+      });
+      router.replace('/Home');
+    }
     } catch (error) {
-      const mensaje = error.response?.data?.error || 'Error de conexión';
-      Alert.alert('Error', mensaje);
+      Alert.alert('Error', error.response?.data?.error || error.message);
     } finally {
       setCargando(false);
     }
   };
-
   if (!fontsLoaded) return null;
 
   return (

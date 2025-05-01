@@ -1,31 +1,39 @@
-import { Stack } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { useRouter } from 'expo-router';
+import { Stack, Redirect } from "expo-router"
+import { AuthProvider, useAuth } from "./context/AuthContext"
+import { ActivityIndicator, View } from "react-native"
 
-export default function RootLayout() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const router = useRouter();
+// Componente para manejar el layout raíz
+function RootNavigator() {
+  const { userToken, isLoading } = useAuth()
 
-  // Verificar autenticación al cargar
-  /* useEffect(() => {
-    // Aquí verificarías si el usuario tiene una sesión válida
-    checkAuthStatus().then(status => {
-      setIsAuthenticated(status);
-      if (!status) {
-        // Redirigir a autenticación si no hay sesión
-        router.replace('/auth/sesioon');
-      } else {
-        // Redirigir a la aplicación principal si hay sesión
-        router.replace('/drawer');
-      }
-    });
-  }, []); */
+  if (isLoading) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
+        <ActivityIndicator size="large" />
+      </View>
+    )
+  }
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="index" />
-      <Stack.Screen name="(auth)" options={{ headerShown: false }} />
-      <Stack.Screen name="(drawer)" options={{ headerShown: false }} />
+      {!userToken ? (
+        <Stack.Screen name="(auth)" />
+      ) : (
+        <Stack.Screen name="(drawer)" />
+      )}
+      
+      {/* Redirecciones por defecto */}
+      {userToken && <Redirect href="/(drawer)/(tabs)/Home" />}
+      {!userToken && <Redirect href="/(auth)/Session" />}
     </Stack>
-  );
+  )
+}
+
+// Componente principal que envuelve con el AuthProvider
+export default function AppLayout() {
+  return (
+    <AuthProvider>
+      <RootNavigator />
+    </AuthProvider>
+  )
 }

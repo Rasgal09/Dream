@@ -1,13 +1,50 @@
 const express = require('express');
-const { MongoClient } = require('mongodb');
+const { MongoClient, ObjectId } = require('mongodb');
 const cors = require('cors');
-const app = express();
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
 
+const app = express();
 app.use(express.json());
 app.use(cors());
 
 const uri = 'mongodb://localhost:27017/Dreamer';
 const client = new MongoClient(uri);
+const JWT_SECRET = process.env.JWT_SECRET || 'tu_secreto_super_seguro';
+
+// Middleware de autenticación
+const autenticar = async (req, res, next) => {
+  try {
+      const token = req.headers.authorization?.split(" ")[1];
+      
+      if (!token) {
+          return res.status(401).json({ error: "Token no proporcionado" });
+      }
+
+      const decoded = jwt.verify(token, JWT_SECRET);
+      const usuario = await client.db('Dreamer').collection('usuario')
+          .findOne({ _id: new ObjectId(decoded.userId) });
+
+      if (!usuario) {
+          return res.status(404).json({ error: "Usuario no encontrado" });
+      }
+
+      req.usuario = {
+          id: usuario._id,
+          nombre: usuario.nombre,
+          correo: usuario.correo
+      };
+      
+      next();
+  } catch (error) {
+      res.status(401).json({ 
+          error: "Token inválido",
+          detalles: error.message 
+      });
+  }
+};
+
+// Endpoint de verificación
 
 async function connectDB() {
     try {
@@ -67,36 +104,143 @@ app.post('/registro', async (req, res) => {
 
 // Ruta de login
 app.post('/login', async (req, res) => {
-    try {
+  try {
       const { correo, contrasena } = req.body;
       
       if (!correo || !contrasena) {
-        return res.status(400).json({ error: 'Correo y contraseña son requeridos' });
+          return res.status(400).json({ error: 'Correo y contraseña son requeridos' });
       }
-  
-      // Buscar usuario
+
       const usuario = await client.db('Dreamer').collection('usuario').findOne({ correo });
+      
       if (!usuario) {
-        return res.status(400).json({ error: 'Usuario no encontrado' });
+          return res.status(400).json({ error: 'Credenciales inválidas' });
       }
-  
-      // Validar contraseña
+
       if (contrasena !== usuario.contrasena) {
-        return res.status(400).json({ error: 'Contraseña incorrecta' });
+          return res.status(400).json({ error: 'Credenciales inválidas' });
       }
-  
-      // Respuesta exitosa
+
+      // Generar token JWT
+      const token = jwt.sign(
+          { 
+              userId: usuario._id,
+              email: usuario.correo
+          },
+          JWT_SECRET,
+          { expiresIn: '1h' } // El token expira en 1 hora
+      );
+
       res.status(200).json({ 
         success: true,
+        token: token,
         usuario: {
           id: usuario._id,
           nombre: usuario.nombre,
-          correo: usuario.correo
+          correo: usuario.correo,
+          peso: usuario.peso,
+          altura: usuario.altura
         }
       });
-  
-    } catch (error) {
+
+  } catch (error) {
       console.error('Error al iniciar sesión:', error);
       res.status(500).json({ error: 'Error en el servidor' });
+  }
+});
+
+// Ruta para actualizar nombre y peso
+app.put('/users/:id', async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { nombre, peso } = req.body;
+  
+      if (!ObjectId.isValid(id)) { // ✅ Ahora ObjectId está definido
+        return res.status(400).json({ error: "ID inválido" });
+      }
+  
+      //2. Validar datos de entrada
+      if (typeof nombre !== 'string' || typeof peso !== 'number') {
+        return res.status(400).json({ error: "Datos de entrada inválidos" });
+      }
+  
+      // 3. Ejecutar actualización
+      const result = await client
+        .db('Dreamer')
+        .collection('usuario')
+        .updateOne(
+          { _id: new ObjectId(id) },
+          { $set: { nombre, peso } }
+        );
+  
+      if (result.modifiedCount === 0) {
+        return res.status(404).json({ error: "Usuario no encontrado o sin cambios" });
+      }
+  
+      res.json({ success: true });
+  
+    } catch (error) {
+      //console.error("Error al actualizar usuario:", error);
+      
+      // 4. Mejorar mensajes de error
+      if (error instanceof MongoError) {
+        return res.status(400).json({ 
+          error: "Error de base de datos",
+          details: error.message 
+        });
+      }
+      
+      res.status(500).json({ 
+        error: "Error interno del servidor",
+        details: error.message // Opcional: solo para entorno de desarrollo
+      });
     }
+  });
+
+  app.get('/progreso', autenticar, async (req, res) => {
+      try {
+          const progreso = await client.db('Dreamer').collection('progreso_pesos')
+              .find({ usuarioId: new ObjectId(req.userId) })
+              .sort({ fecha: 1 })
+              .limit(6)
+              .toArray();
+
+          res.json(progreso);
+      } catch (error) {
+          console.error("Error en GET /progreso:", error);
+          res.status(500).json({ 
+              error: "Error al obtener historial de peso",
+              detalles: error.message 
+          });
+      }
+  });
+
+// Registrar nuevo peso
+  app.post('/progreso', autenticar, async (req, res) => {
+      try {
+          const nuevoRegistro = {
+              usuarioId: new ObjectId(req.userId),
+              peso: req.body.peso,
+              fecha: new Date()
+          };
+
+          const result = await client.db('Dreamer').collection('progreso_pesos')
+              .insertOne(nuevoRegistro);
+
+          res.status(201).json(result.ops[0]);
+          
+      } catch (error) {
+          console.error("Error en POST /progreso:", error);
+          res.status(500).json({ 
+              error: "Error al guardar registro de peso",
+              detalles: error.message 
+          });
+      }
+  });
+  // Endpoint para verificar tokens
+  app.get('/auth/verificar-token', autenticar, (req, res) => {
+    res.json({
+        valido: true,
+        usuario: req.usuario
+    });
   });
