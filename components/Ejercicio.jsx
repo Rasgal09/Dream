@@ -1,108 +1,141 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native'
-import React from 'react'
-import { Colors } from '../assets/Colors'
-import { LinearGradient } from 'expo-linear-gradient'
-
-// Importa todas tus imágenes de ejercicios
-import { HackSquat } from '../assets/HackSquat'
-import { Prensa } from '../assets/Prensa'
-import { PressBanca } from '../assets/PressBanca'
-import { Dominada } from '../assets/Dominada'
-import { CurlBiceps } from '../assets/CurlBiceps'
-import { Sentadilla } from '../assets/Sentadilla'
-import { AperturaMancuernas } from '../assets/AperturaMancuernas'
-import { Flexiones } from '../assets/Flexiones'
-import { Plancha } from '../assets/Plancha'
-import { CrunchMaquina } from '../assets/CrunchMaquina'
-import { RemoMaquina } from '../assets/RemoMaquina'
-import { ElevacionesLat } from '../assets/ElevacionesLat'
-
-// Objeto que mapea nombres de ejercicios a componentes de imagen
-const exerciseImages = {
-    'Hack Squat': HackSquat,
-    'Prensa': Prensa,
-    'Press de banca': PressBanca,
-    'Dominada': Dominada,
-    'Curl de bíceps': CurlBiceps,
-    'Sentadilla libre': Sentadilla,
-    'Apertura con Mancuernas': AperturaMancuernas,
-    'Flexiones': Flexiones,
-    'Plancha': Plancha,
-    'Crunch en máquina': CrunchMaquina,
-    'Remo en máquina': RemoMaquina,
-    'Elevaciones laterales': ElevacionesLat,
-
-  // Añade más ejercicios según necesites
-}
+import { StyleSheet, Text, View, Image, TouchableOpacity } from 'react-native';
+import React from 'react';
+import { Colors } from '../assets/Colors';
+import { Ionicons } from '@expo/vector-icons';
 
 const Ejercicio = (props) => {
-  const { title, muscleGroup, difficulty, equipment } = props
+  const { 
+    title, 
+    muscleGroup, 
+    equipment, 
+    gifUrl,
+    target,
+    onPress
+  } = props;
   
-  // Obtiene el componente de imagen correspondiente al título del ejercicio
-  const ExerciseImage = exerciseImages[title] || HackSquat // Usa HackSquat como imagen por defecto
+  // Traducciones para términos en inglés
+  const translateBodyPart = (part) => {
+    const translations = {
+      'back': 'Espalda',
+      'cardio': 'Cardio',
+      'chest': 'Pecho',
+      'lower arms': 'Antebrazos',
+      'lower legs': 'Pantorrillas',
+      'neck': 'Cuello',
+      'shoulders': 'Hombros',
+      'upper arms': 'Brazos',
+      'upper legs': 'Piernas',
+      'waist': 'Cintura',
+      'legs': 'Piernas',
+      'arms': 'Brazos'
+    };
+    return translations[part.toLowerCase()] || part;
+  };
+
+  const translateEquipment = (equip) => {
+    const translations = {
+      'body weight': 'Peso corporal',
+      'machine': 'Máquina',
+      'dumbbell': 'Mancuernas',
+      'barbell': 'Barra',
+      'cable': 'Polea',
+      'kettlebell': 'Kettlebell',
+      'band': 'Banda elástica',
+      'medicine ball': 'Balón medicinal',
+      'exercise ball': 'Pelota de ejercicio',
+      'ez barbell': 'Barra EZ'
+    };
+    return translations[equip.toLowerCase()] || equip;
+  };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{title}</Text>
+    <TouchableOpacity 
+      style={styles.container}
+      onPress={onPress}
+      activeOpacity={0.8}
+    >
+      {/* Imagen del ejercicio */}
       <View style={styles.imageContainer}>
-        <ExerciseImage style={styles.image} />
+        {gifUrl ? (
+          <Image 
+            source={{ uri: gifUrl }} 
+            style={styles.image}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={styles.placeholderImage}>
+            <Ionicons name="image-outline" size={40} color={Colors.text2} />
+          </View>
+        )}
       </View>
       
-    </View>
-  )
-}
-
-export default Ejercicio
+      {/* Información del ejercicio */}
+      <View style={styles.infoContainer}>
+        <Text style={styles.title} numberOfLines={2}>{title}</Text>
+        
+        <View style={styles.detailRow}>
+          <Ionicons name="body-outline" size={16} color={Colors.text2} />
+          <Text style={styles.detailText}>{translateBodyPart(muscleGroup)}</Text>
+        </View>
+        
+        <View style={styles.detailRow}>
+          <Ionicons name="barbell-outline" size={16} color={Colors.text2} />
+          <Text style={styles.detailText}>{translateEquipment(equipment)}</Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+};
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
     backgroundColor: Colors.fondos2,
-    
-    borderRadius: 20,
-    margin: 10,
-    padding: 10,
-  },
-  title: {
-    marginTop: 10,
-    fontSize: 22,
-    fontFamily: 'Kanit_800ExtraBold',
-    color: Colors.text2,
-    textAlign: 'center',
+    borderRadius: 12,
+    margin: 8,
+    overflow: 'hidden',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
   },
   imageContainer: {
-    margin: 10,
-    alignItems: 'center',
-    justifyContent: 'center',
-    
-    height: 100,
+    width: '100%',
+    aspectRatio: 1,
+    backgroundColor: Colors.fondos,
   },
   image: {
-    
-    resizeMode: 'contain',
+    width: '100%',
+    height: '100%',
   },
-  detailsContainer: {
-   
-    paddingHorizontal: 15,
-    marginBottom: 10,
+  placeholderImage: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Colors.fondos,
+  },
+  infoContainer: {
+    padding: 12,
+  },
+  title: {
+    fontSize: 16,
+    fontFamily: 'Kanit_600SemiBold',
+    color: Colors.text1,
+    marginBottom: 8,
+    minHeight: 40,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 4,
   },
   detailText: {
     fontFamily: 'SofiaSans_500Medium',
     color: Colors.text2,
     fontSize: 14,
-    marginVertical: 2,
+    marginLeft: 6,
   },
-  btn: {
-    padding: 11,
-    borderRadius: 5,
-    alignItems: 'center',
-    width: '70%',
-    marginBottom: 15,
-  },
-  text: {
-    fontFamily: 'SofiaSans_500Medium',
-    color: Colors.text2,
-  }
-})
+});
+
+export default Ejercicio;
