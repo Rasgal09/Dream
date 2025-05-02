@@ -10,6 +10,9 @@ import {
   ScrollView,
   Platform
 } from 'react-native';
+
+import axios from 'axios';
+
 import { useFonts, SofiaSans_900Black } from '@expo-google-fonts/sofia-sans';
 import { Kanit_900Black } from '@expo-google-fonts/kanit';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -189,8 +192,23 @@ const RegistroCompleto = () => {
         ]).start();
       });
     } else {
-      // CAMBIO PRINCIPAL: Usamos router.replace de Expo Router
-      router.replace('/Home');
+        const userData = {
+          nombre: nombre,
+          genero: selectedSex,
+          correo: correo,
+          contrasena: contrasena, // ✅ Campo corregido
+          peso: selectedWeight,
+          altura: selectedHeight
+        };
+  
+            axios.post('http://10.33.25.219:3000/registro', userData).then(response => {
+            console.log('Registro exitoso:', response.data);
+            router.push('/home');
+          })
+          .catch(error => {
+            console.error('Error en el registro:', error.message);
+            alert('Error: ' + (error.response?.data.error || 'Verifica tu conexión'));
+          });
     }
   };
 
