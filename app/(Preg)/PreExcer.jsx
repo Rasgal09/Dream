@@ -1,13 +1,25 @@
 "use client"
 
 import { useState, useRef, useEffect } from "react"
-import { StyleSheet, Text, View, Pressable, Dimensions, Animated, TextInput, StatusBar, FlatList } from "react-native"
+import {
+  StyleSheet,
+  Text,
+  View,
+  Pressable,
+  Dimensions,
+  Animated,
+  TextInput,
+  StatusBar,
+  FlatList,
+  ActivityIndicator,
+} from "react-native"
 import { useFonts, SofiaSans_900Black } from "@expo-google-fonts/sofia-sans"
 import { Kanit_900Black } from "@expo-google-fonts/kanit"
 import { LinearGradient } from "expo-linear-gradient"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { router } from "expo-router"
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons"
+import { useRoutineAPI } from "./hooks/useRoutineAPI"
 
 const { width, height } = Dimensions.get("window")
 
@@ -26,6 +38,7 @@ const COLORS = {
 
 const RutinaGymPersonalizada = () => {
   const insets = useSafeAreaInsets()
+  const { generateRoutine, loading, error, progress = 0 } = useRoutineAPI()
 
   // Fonts loading
   const [fontsLoaded] = useFonts({
@@ -94,14 +107,17 @@ const RutinaGymPersonalizada = () => {
 
   // Options
   const focusAreaOptions = [
-    { label: "Cuerpo completo", value: "full_body", icon: "human" },
-    { label: "Hombros de roca", value: "shoulders", icon: "human-handsup" },
-    { label: "Bíceps masivos", value: "biceps", icon: "arm-flex" },
-    { label: "Pecho amplio", value: "chest", icon: "human-male" },
-    { label: "Espalda ancha", value: "back", icon: "human-male-board" },
-    { label: "Abdominales", value: "abs", icon: "six-pack" },
-    { label: "Glúteos firmes", value: "glutes", icon: "human-female" },
-    { label: "Piernas fuertes", value: "legs", icon: "human-male-height" },
+    
+    { label: "Espalda", value: "back", icon: "human-male-board" },
+    { label: "Cardio", value: "cardio", icon: "run-fast" },
+    { label: "Pecho", value: "chest", icon: "human-male" },
+    { label: "Antebrazos", value: "lower arms", icon: "arm-flex-outline" },
+    { label: "Pantorrillas", value: "lower legs", icon: "human-male-height-variant" },
+    { label: "Cuello", value: "neck", icon: "head-outline" },
+    { label: "Hombros", value: "shoulders", icon: "human-handsup" },
+    { label: "Bíceps/Tríceps", value: "upper arms", icon: "arm-flex" },
+    { label: "Muslos", value: "upper legs", icon: "human-male-height" },
+    { label: "Abdominales", value: "waist", icon: "six-pack" },
   ]
 
   const trainingPlaceOptions = [
@@ -153,13 +169,14 @@ const RutinaGymPersonalizada = () => {
   ]
 
   const workoutDayOptions = [
+    { label: "Domingo", value: "sunday", short: "DO" },
     { label: "Lunes", value: "monday", short: "LU" },
     { label: "Martes", value: "tuesday", short: "MA" },
     { label: "Miércoles", value: "wednesday", short: "MI" },
     { label: "Jueves", value: "thursday", short: "JU" },
     { label: "Viernes", value: "friday", short: "VI" },
     { label: "Sábado", value: "saturday", short: "SÁ" },
-    { label: "Domingo", value: "sunday", short: "DO" },
+    
   ]
 
   const workoutDurationOptions = [
@@ -256,8 +273,7 @@ const RutinaGymPersonalizada = () => {
     }
   }
 
-  // Optimized next step function
-  const nextStep = () => {
+  const nextStep = async () => {
     if (step < steps.length - 1) {
       Animated.parallel([
         Animated.timing(fadeAnim, {
@@ -286,24 +302,35 @@ const RutinaGymPersonalizada = () => {
         ]).start()
       })
     } else {
-      // Enviar datos a la IA para generar rutina
-      const userPreferences = {
-        focusAreas: selectedFocusAreas,
-        trainingPlace: selectedTrainingPlace,
-        fitnessLevel: selectedFitnessLevel,
-        workoutDays: selectedWorkoutDays,
-        workoutDuration: selectedWorkoutDuration,
-        equipment: selectedEquipment,
-        workoutType: selectedWorkoutType,
+      try {
+        const userPreferences = {
+          focusAreas: selectedFocusAreas,
+          trainingPlace: selectedTrainingPlace,
+          fitnessLevel: selectedFitnessLevel,
+          workoutDays: selectedWorkoutDays,
+          workoutDuration: selectedWorkoutDuration,
+          equipment: selectedEquipment,
+          workoutType: selectedWorkoutType,
+        }
+
+        setStep(steps.length) // Pantalla de carga
+        const generatedRoutine = await generateRoutine(userPreferences)
+
+        router.replace({
+          pathname: "/RutinaGenerada", // Asegúrate que coincida con tu estructura de archivos
+          params: { routine: JSON.stringify(generatedRoutine) },
+        })
+      } catch (err) {
+        console.error("Error al generar rutina:", err)
+        setStep(steps.length - 1) // Volver al último paso si hay error
       }
-      console.log("Preferencias para rutina:", userPreferences)
-      router.replace("/RutinaGenerada")
     }
   }
 
   // Nueva función para retroceder un paso
   const prevStep = () => {
-    if (step > 0) {
+    if (step > 0 && !loading) {
+      // Animación para retroceder
       Animated.parallel([
         Animated.timing(fadeAnim, {
           toValue: 0,
@@ -698,7 +725,9 @@ const RutinaGymPersonalizada = () => {
   }
 
   const renderStepContent = () => {
+    if (!steps || step >= steps.length) return null
     const currentStep = steps[step]
+    if (!currentStep) return null
 
     switch (currentStep.type) {
       case "focusAreas":
@@ -729,40 +758,59 @@ const RutinaGymPersonalizada = () => {
       (step === 2 && !selectedFitnessLevel) ||
       (step === 3 && selectedWorkoutDays.length === 0) ||
       (step === 4 && !selectedWorkoutDuration) ||
-      (step === 6 && !selectedWorkoutType)
+      (step === 6 && !selectedWorkoutType) ||
+      loading
     )
   }
 
-  if (!fontsLoaded) return null
+  // Mostrar un indicador de carga mientras se cargan las fuentes
+  if (!fontsLoaded) {
+    return (
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center", backgroundColor: COLORS.background }}>
+        <ActivityIndicator size="large" color={COLORS.primary} />
+      </View>
+    )
+  }
 
   return (
     <View style={[styles.container, { paddingTop: insets.top }]}>
       <StatusBar barStyle="light-content" backgroundColor={COLORS.background} />
 
-      {/* Header con botón de retroceso y progreso */}
+      {/* Header */}
       <View style={styles.header}>
-        {step > 0 && (
-          <Pressable
-            style={styles.backButton}
-            onPress={prevStep}
-            android_ripple={{ color: "rgba(255, 255, 255, 0.1)", radius: 20 }}
-          >
+        {step > 0 && step < steps.length && (
+          <Pressable style={styles.backButton} onPress={prevStep}>
             <MaterialCommunityIcons name="arrow-left" size={24} color={COLORS.text} />
           </Pressable>
         )}
         <View style={styles.progressContainer}>
           <Text style={styles.progressText}>
-            Paso {step + 1} de {steps.length}
+            Paso {step < steps.length ? step + 1 : steps.length} de {steps.length}
           </Text>
           <View style={styles.progressBar}>
             <Animated.View
               style={[
                 styles.progressFill,
                 {
-                  width: progressAnim.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: ["0%", "100%"],
-                  }),
+                  width:
+                    step === steps.length
+                      ? Animated.add(
+                          progressAnim.interpolate({
+                            inputRange: [0, 1],
+                            outputRange: ["0%", "90%"],
+                          }),
+                          Animated.multiply(
+                            progress,
+                            progressAnim.interpolate({
+                              inputRange: [0, 1],
+                              outputRange: ["0%", "10%"],
+                            }),
+                          ),
+                        )
+                      : progressAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: ["0%", "100%"],
+                        }),
                 },
               ]}
             />
@@ -770,34 +818,56 @@ const RutinaGymPersonalizada = () => {
         </View>
       </View>
 
-      {/* Main Content */}
+      {/* Contenido principal */}
       <Animated.View style={[styles.contentContainer, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-        <Text style={styles.title}>{steps[step].title}</Text>
-        <Text style={styles.subtitle}>{steps[step].subtitle}</Text>
+        {step < steps.length ? (
+          <>
+            <Text style={styles.title}>{steps[step].title}</Text>
+            <Text style={styles.subtitle}>{steps[step].subtitle}</Text>
+            <View style={styles.stepContent}>{renderStepContent()}</View>
+          </>
+        ) : (
+          <View style={styles.loadingContainer}>
+            <MaterialCommunityIcons name="weight-lifter" size={60} color={COLORS.primary} />
+            <Text style={styles.loadingText}>Generando tu rutina personalizada...</Text>
+            <View style={styles.loadingBarContainer}>
+              <Animated.View
+                style={[
+                  styles.loadingBar,
+                  {
+                    width: Animated.multiply(progress, 100).interpolate({
+                      inputRange: [0, 100],
+                      outputRange: ["0%", "100%"],
+                    }),
+                  },
+                ]}
+              />
+            </View>
+          </View>
+        )}
 
-        <View style={styles.stepContent}>{renderStepContent()}</View>
-
-        <Pressable
-          style={[styles.continueButton, isNextButtonDisabled() && styles.continueButtonDisabled]}
-          onPress={nextStep}
-          disabled={isNextButtonDisabled()}
-          android_ripple={{ color: "rgba(255, 255, 255, 0.2)" }}
-        >
-          <LinearGradient
-            colors={[COLORS.primary, COLORS.secondary]}
-            style={styles.gradientButton}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 0 }}
+        {step < steps.length && (
+          <Pressable
+            style={[styles.continueButton, isNextButtonDisabled() && styles.continueButtonDisabled]}
+            onPress={nextStep}
+            disabled={isNextButtonDisabled()}
           >
-            <Text style={styles.buttonText}>{step === steps.length - 1 ? "GENERAR RUTINA" : "CONTINUAR"}</Text>
-            <MaterialCommunityIcons
-              name={step === steps.length - 1 ? "check" : "arrow-right"}
-              size={20}
-              color={COLORS.text}
-              style={styles.buttonIcon}
-            />
-          </LinearGradient>
-        </Pressable>
+            <LinearGradient
+              colors={[COLORS.primary, COLORS.secondary]}
+              style={styles.gradientButton}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+            >
+              <Text style={styles.buttonText}>{step === steps.length - 1 ? "GENERAR RUTINA" : "CONTINUAR"}</Text>
+              <MaterialCommunityIcons
+                name={step === steps.length - 1 ? "check" : "arrow-right"}
+                size={20}
+                color={COLORS.text}
+                style={styles.buttonIcon}
+              />
+            </LinearGradient>
+          </Pressable>
+        )}
       </Animated.View>
     </View>
   )
@@ -1201,6 +1271,32 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   loadingIndicator: {
+    width: "100%",
+    height: 8,
+    backgroundColor: COLORS.border,
+    borderRadius: 4,
+    overflow: "hidden",
+    marginTop: 20,
+  },
+  loadingBar: {
+    height: "100%",
+    backgroundColor: COLORS.primary,
+    borderRadius: 4,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  loadingText: {
+    color: COLORS.text,
+    fontSize: 20,
+    textAlign: "center",
+    marginTop: 20,
+    marginBottom: 30,
+  },
+  loadingBarContainer: {
     width: "100%",
     height: 8,
     backgroundColor: COLORS.border,
