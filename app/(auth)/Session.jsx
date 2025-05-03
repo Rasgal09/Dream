@@ -8,6 +8,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Logo } from '../../components/Logo';
 import { Colors } from '../../assets/Colors';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const Session = () => {
   const [correo, setCorreo] = useState('');
@@ -25,16 +26,18 @@ const Session = () => {
       Alert.alert('Error', 'Por favor completa todos los campos');
       return;
     }
-
+  
     setCargando(true);
-
+  
     try {
-      const response = await axios.post('http://10.33.25.219:3000/login', {
+      const response = await axios.post('http://192.168.1.115:3000/login', {
         correo,
         contrasena
       });
-
+  
       if (response.data.success) {
+        // Guardar el correo en AsyncStorage antes de redirigir
+        await AsyncStorage.setItem('userEmail', correo);
         router.replace('/Home');
       }
     } catch (error) {
