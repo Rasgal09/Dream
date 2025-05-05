@@ -1,5 +1,4 @@
-// components/DietaGenerada.jsx
-import { useEffect, useState } from "react"
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -9,12 +8,15 @@ import {
   SafeAreaView,
   Pressable,
   TouchableOpacity,
-} from "react-native"
-import { useLocalSearchParams, useRouter } from "expo-router"
-import { MaterialCommunityIcons } from "@expo/vector-icons"
-import { LinearGradient } from "expo-linear-gradient"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { Clipboard } from "react-native"
+  Alert
+} from "react-native";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Clipboard } from "react-native";
+import axios from "axios";
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const COLORS = {
   background: "#1A1A1A",
@@ -34,77 +36,48 @@ const COLORS = {
     dinner: "#AF52DE",
     snack: "#34C759",
   },
-}
+};
 
-// Función para parsear el texto de la dieta en secciones estructuradas
 const parseDietPlan = (dietText) => {
-  // Intentamos identificar días en el plan
-  const dayRegex = /DÍA \d+|DIA \d+|Día \d+/gi
-  const dayMatches = [...dietText.matchAll(dayRegex)]
+  const dayRegex = /DÍA \d+|DIA \d+|Día \d+/gi;
+  const dayMatches = [...dietText.matchAll(dayRegex)];
 
-  // Si no encontramos días específicos, tratamos el plan como un día único
   if (dayMatches.length === 0) {
-    return [
-      {
-        title: "Plan Completo",
-        content: dietText,
-      },
-    ]
+    return [{ title: "Plan Completo", content: dietText }];
   }
 
-  // Dividimos el texto por días
-  const days = []
-  for (let i = 0; i < dayMatches.length; i++) {
-    const currentMatch = dayMatches[i]
-    const nextMatch = dayMatches[i + 1]
+  return dayMatches.map((match, index) => ({
+    title: match[0],
+    content: dietText.substring(
+      match.index,
+      dayMatches[index + 1] ? dayMatches[index + 1].index : dietText.length
+    )
+  }));
+};
 
-    const startIndex = currentMatch.index
-    const endIndex = nextMatch ? nextMatch.index : dietText.length
-
-    const dayContent = dietText.substring(startIndex, endIndex)
-
-    days.push({
-      title: currentMatch[0],
-      content: dayContent,
-    })
-  }
-
-  return days
-}
-
-// Componente para cada tipo de comida
 const MealSection = ({ title, content, icon }) => {
-  const [expanded, setExpanded] = useState(true)
+  const [expanded, setExpanded] = useState(true);
 
-  // Determinar el color basado en el tipo de comida
   const getMealColor = () => {
-    const lowerTitle = title.toLowerCase()
-    if (lowerTitle.includes("desayuno")) return COLORS.mealTypes.breakfast
-    if (lowerTitle.includes("almuerzo") || lowerTitle.includes("comida")) return COLORS.mealTypes.lunch
-    if (lowerTitle.includes("cena")) return COLORS.mealTypes.dinner
-    if (lowerTitle.includes("snack") || lowerTitle.includes("merienda")) return COLORS.mealTypes.snack
-    return COLORS.primary
-  }
-
-  const mealColor = getMealColor()
-
-  // Determinar el icono basado en el tipo de comida
-  const getMealIcon = () => {
-    const lowerTitle = title.toLowerCase()
-    if (lowerTitle.includes("desayuno")) return "food-croissant"
-    if (lowerTitle.includes("almuerzo") || lowerTitle.includes("comida")) return "food"
-    if (lowerTitle.includes("cena")) return "food-turkey"
-    if (lowerTitle.includes("snack") || lowerTitle.includes("merienda")) return "food-apple"
-    return icon || "silverware-fork-knife"
-  }
+    const lowerTitle = title.toLowerCase();
+    if (lowerTitle.includes("desayuno")) return COLORS.mealTypes.breakfast;
+    if (lowerTitle.includes("almuerzo") || lowerTitle.includes("comida")) return COLORS.mealTypes.lunch;
+    if (lowerTitle.includes("cena")) return COLORS.mealTypes.dinner;
+    if (lowerTitle.includes("snack") || lowerTitle.includes("merienda")) return COLORS.mealTypes.snack;
+    return COLORS.primary;
+  };
 
   return (
     <View style={styles.mealSection}>
       <TouchableOpacity
-        style={[styles.mealHeader, { borderLeftColor: mealColor }]}
+        style={[styles.mealHeader, { borderLeftColor: getMealColor() }]}
         onPress={() => setExpanded(!expanded)}
       >
-        <MaterialCommunityIcons name={getMealIcon()} size={24} color={mealColor} />
+        <MaterialCommunityIcons 
+          name={icon || "silverware-fork-knife"} 
+          size={24} 
+          color={getMealColor()} 
+        />
         <Text style={styles.mealTitle}>{title}</Text>
         <MaterialCommunityIcons
           name={expanded ? "chevron-up" : "chevron-down"}
@@ -119,110 +92,216 @@ const MealSection = ({ title, content, icon }) => {
         </View>
       )}
     </View>
-  )
-}
+  );
+};
 
-// Componente para cada día del plan
-const DaySection = ({ day, index, activeDayIndex, setActiveDayIndex }) => {
-  const isActive = index === activeDayIndex
-
-  return (
-    <TouchableOpacity style={[styles.dayTab, isActive && styles.activeDayTab]} onPress={() => setActiveDayIndex(index)}>
-      <Text style={[styles.dayTabText, isActive && styles.activeDayTabText]}>
-        {day.title.length > 10 ? day.title.substring(0, 10) + "..." : day.title}
-      </Text>
-    </TouchableOpacity>
-  )
-}
-
-// Componente para mostrar información nutricional
 const NutritionInfo = ({ content }) => {
-  // Intentamos extraer información nutricional del texto
-  const caloriesMatch = content.match(/(\d+)\s*(?:kcal|calorías|calorias)/i)
-  const proteinMatch = content.match(/(\d+)(?:\.\d+)?\s*g\s*(?:de)?\s*proteínas/i)
-  const carbsMatch = content.match(/(\d+)(?:\.\d+)?\s*g\s*(?:de)?\s*(?:carbohidratos|carbos)/i)
-  const fatMatch = content.match(/(\d+)(?:\.\d+)?\s*g\s*(?:de)?\s*grasas/i)
+  const extractNutrition = (regex) => {
+    const match = content.match(regex);
+    return match ? match[1] : null;
+  };
 
-  if (!caloriesMatch && !proteinMatch && !carbsMatch && !fatMatch) {
-    return null
-  }
+  const nutritionData = {
+    calories: extractNutrition(/(\d+)\s*(?:kcal|calorías|calorias)/i),
+    protein: extractNutrition(/(\d+)(?:\.\d+)?\s*g\s*(?:de)?\s*proteínas/i),
+    carbs: extractNutrition(/(\d+)(?:\.\d+)?\s*g\s*(?:de)?\s*(?:carbohidratos|carbos)/i),
+    fat: extractNutrition(/(\d+)(?:\.\d+)?\s*g\s*(?:de)?\s*grasas/i)
+  };
+
+  if (!Object.values(nutritionData).some(Boolean)) return null;
 
   return (
     <View style={styles.nutritionCard}>
       <Text style={styles.nutritionTitle}>Información Nutricional</Text>
       <View style={styles.nutritionGrid}>
-        {caloriesMatch && (
+        {nutritionData.calories && (
           <View style={styles.nutritionItem}>
             <MaterialCommunityIcons name="fire" size={20} color={COLORS.warning} />
-            <Text style={styles.nutritionValue}>{caloriesMatch[1]}</Text>
+            <Text style={styles.nutritionValue}>{nutritionData.calories}</Text>
             <Text style={styles.nutritionLabel}>kcal</Text>
           </View>
         )}
-        {proteinMatch && (
+        {nutritionData.protein && (
           <View style={styles.nutritionItem}>
             <MaterialCommunityIcons name="food-steak" size={20} color={COLORS.mealTypes.dinner} />
-            <Text style={styles.nutritionValue}>{proteinMatch[1]}g</Text>
+            <Text style={styles.nutritionValue}>{nutritionData.protein}g</Text>
             <Text style={styles.nutritionLabel}>Proteína</Text>
           </View>
         )}
-        {carbsMatch && (
+        {nutritionData.carbs && (
           <View style={styles.nutritionItem}>
             <MaterialCommunityIcons name="bread-slice" size={20} color={COLORS.mealTypes.breakfast} />
-            <Text style={styles.nutritionValue}>{carbsMatch[1]}g</Text>
+            <Text style={styles.nutritionValue}>{nutritionData.carbs}g</Text>
             <Text style={styles.nutritionLabel}>Carbos</Text>
           </View>
         )}
-        {fatMatch && (
+        {nutritionData.fat && (
           <View style={styles.nutritionItem}>
             <MaterialCommunityIcons name="oil" size={20} color={COLORS.mealTypes.lunch} />
-            <Text style={styles.nutritionValue}>{fatMatch[1]}g</Text>
+            <Text style={styles.nutritionValue}>{nutritionData.fat}g</Text>
             <Text style={styles.nutritionLabel}>Grasas</Text>
           </View>
         )}
       </View>
     </View>
-  )
-}
+  );
+};
 
-// Componente principal
 const DietaGenerada = () => {
-  const insets = useSafeAreaInsets()
-  const router = useRouter()
-  const params = useLocalSearchParams()
-  const [dietPlan, setDietPlan] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [parsedDays, setParsedDays] = useState([])
-  const [activeDayIndex, setActiveDayIndex] = useState(0)
-  const [copied, setCopied] = useState(false)
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const params = useLocalSearchParams();
+  const [dietPlan, setDietPlan] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [parsedDays, setParsedDays] = useState([]);
+  const [activeDayIndex, setActiveDayIndex] = useState(0);
+  const [copied, setCopied] = useState(false);
+  const [userId, setUserId] = useState(null);
 
   useEffect(() => {
-    if (params.dietPlan) {
+    const loadData = async () => {
       try {
-        const parsedPlan = JSON.parse(params.dietPlan)
-        setDietPlan(parsedPlan)
+        // Obtener userId de AsyncStorage
+        const storedUserId = await AsyncStorage.getItem('userId');
+        setUserId(storedUserId);
 
-        // Parsear el plan en días
-        const days = parseDietPlan(parsedPlan)
-        setParsedDays(days)
-      } catch (e) {
-        console.error("Error parsing diet plan:", e)
+        // Cargar dieta desde params
+        if (params.dietPlan) {
+          const parsed = typeof params.dietPlan === 'string' ? 
+            JSON.parse(params.dietPlan) : params.dietPlan;
+          setDietPlan(parsed.dietPlan || parsed);
+          setParsedDays(parseDietPlan(parsed.dietPlan || parsed));
+        }
+      } catch (error) {
+        console.error("Error loading data:", error);
+        Alert.alert("Error", "No se pudo cargar la dieta");
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
-  }, [params.dietPlan])
+    };
+
+    loadData();
+  }, [params.dietPlan]);
 
   const copyToClipboard = () => {
     if (dietPlan) {
-      Clipboard.setString(dietPlan)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      Clipboard.setString(dietPlan);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     }
-  }
+  };
 
-  // Función para extraer secciones de comidas del texto del día
-  const extractMealSections = (dayContent) => {
-    // Patrones comunes para tipos de comidas
+  const saveDiet = async () => {
+    if (!userId) {
+      Alert.alert('Error', 'No se encontró ID de usuario. Vuelve a iniciar sesión.');
+      return;
+    }
+  
+    try {
+      console.log('🚀 Enviando dieta al servidor...', {
+        userId,
+        dietText: dietPlan.substring(0, 50) + '...', // Muestra solo el inicio
+        preferences: params.preferences || {}
+      });
+  
+      // 1. Verificar conexión primero
+      const API_URL = await verifyConnection();
+      
+      // 2. Enviar datos
+      const response = await axios.post(`${API_URL}/guardar-dieta`, {
+        userId: userId.trim(), // Limpiar espacios
+        dietText: dietPlan,
+        preferences: params.preferences || {}
+      }, {
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        timeout: 80000// 8 segundos
+      });
+  
+      console.log('✅ Respuesta del servidor:', response.data);
+      
+      if (response.data.success) {
+        Alert.alert('Éxito', 'Dieta guardada en tu perfil');
+        // Opcional: Actualizar estado local si es necesario
+      } else {
+        throw new Error(response.data.error || 'Error en la respuesta del servidor');
+      }
+  
+    } catch (error) {
+      handleSaveError(error);
+    }
+  };
+  
+  // Función auxiliar para verificar conexión
+  const verifyConnection = async () => {
+    try {
+      const isEmulator = await checkIfEmulator();
+      const baseURL = isEmulator ? 'http://10.0.2.2:3000' : 'http://192.168.1.115:3000';
+      
+      // Verificar si el servidor está vivo
+      await axios.get(`${baseURL}/health-check`, { timeout: 30000 });
+      return baseURL;
+      
+    } catch (error) {
+      console.error('🔴 Error de conexión:', error.message);
+      throw new Error('No se pudo conectar al servidor. Verifica tu red.');
+    }
+  };
+  
+  // Manejador de errores mejorado
+  const handleSaveError = (error) => {
+    console.error('💥 Error completo:', {
+      code: error.code,
+      message: error.message,
+      responseStatus: error.response?.status,
+      responseData: error.response?.data,
+      requestUrl: error.config?.url
+    });
+  
+    let userMessage = 'Error al guardar';
+    let technicalMessage = '';
+  
+    if (error.response) {
+      // Errores 4xx/5xx del servidor
+      technicalMessage = error.response.data?.error || `Error ${error.response.status}`;
+      
+      if (error.response.status === 404) {
+        userMessage = 'Servicio no disponible (revisa la URL)';
+      } else if (error.response.status === 400) {
+        userMessage = 'Datos inválidos enviados';
+      }
+    } else if (error.request) {
+      // No hubo respuesta del servidor
+      userMessage = 'El servidor no respondió';
+      technicalMessage = 'Timeout o red no disponible';
+    } else {
+      // Error en la configuración
+      technicalMessage = error.message;
+    }
+  
+    Alert.alert(
+      userMessage,
+      technicalMessage,
+      [{ text: 'Entendido', style: 'cancel' }]
+    );
+  };
+  
+  // Helper para detectar emulador (Android/iOS)
+  const checkIfEmulator = async () => {
+    try {
+      if (Platform.OS === 'android') {
+        const isEmulator = await DeviceInfo.isEmulator();
+        return isEmulator;
+      }
+      return false;
+    } catch {
+      return false;
+    }
+  };
+
+  const extractMealSections = (content) => {
     const mealPatterns = [
       { regex: /🍳?\s*desayuno:?.*?(?=🍽️|🥗|🍲|🥪|snack|merienda|almuerzo|comida|cena|$)/is, title: "🍳 Desayuno" },
       { regex: /🍽️?\s*almuerzo:?.*?(?=🍳|🥗|🍲|🥪|snack|merienda|desayuno|comida|cena|$)/is, title: "🍽️ Almuerzo" },
@@ -230,57 +309,44 @@ const DietaGenerada = () => {
       { regex: /🍽️?\s*cena:?.*?(?=🍳|🥗|🍲|🥪|snack|merienda|desayuno|almuerzo|comida|$)/is, title: "🍽️ Cena" },
       { regex: /🥪?\s*snack:?.*?(?=🍳|🍽️|🥗|🍲|desayuno|merienda|almuerzo|comida|cena|$)/is, title: "🥪 Snack" },
       { regex: /🥗?\s*merienda:?.*?(?=🍳|🍽️|🍲|🥪|snack|desayuno|almuerzo|comida|cena|$)/is, title: "🥗 Merienda" },
-    ]
+    ];
 
-    const meals = []
-
-    // Extraer cada tipo de comida
-    for (const pattern of mealPatterns) {
-      const match = dayContent.match(pattern.regex)
-      if (match && match[0].trim()) {
-        meals.push({
+    const meals = mealPatterns
+      .map(pattern => {
+        const match = content.match(pattern.regex);
+        return match ? {
           title: pattern.title,
-          content: match[0].replace(new RegExp(`^.*?${pattern.title.split(" ")[1]}:?`, "i"), "").trim(),
-        })
-      }
-    }
+          content: match[0].replace(new RegExp(`^.*?${pattern.title.split(" ")[1]}:?`, "i"), "").trim()
+        } : null;
+      })
+      .filter(Boolean);
 
-    // Si no se encontraron comidas específicas, devolver el contenido completo
-    if (meals.length === 0) {
-      return [
-        {
-          title: "Plan del día",
-          content: dayContent,
-        },
-      ]
-    }
-
-    return meals
-  }
+    return meals.length > 0 ? meals : [{ title: "Plan del día", content }];
+  };
 
   if (loading) {
     return (
       <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
         <ActivityIndicator size="large" color={COLORS.primary} />
-        <Text style={styles.loadingText}>Cargando tu dieta personalizada...</Text>
+        <Text style={styles.loadingText}>Cargando tu dieta...</Text>
       </View>
-    )
+    );
   }
 
   if (!dietPlan) {
     return (
       <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
         <MaterialCommunityIcons name="alert-circle" size={48} color={COLORS.danger} />
-        <Text style={styles.errorText}>No se pudo cargar la dieta. Por favor intenta nuevamente.</Text>
+        <Text style={styles.errorText}>No se pudo cargar la dieta</Text>
         <Pressable style={styles.backButton} onPress={() => router.back()}>
           <Text style={styles.backButtonText}>Volver</Text>
         </Pressable>
       </View>
-    )
+    );
   }
 
-  const activeDay = parsedDays[activeDayIndex]
-  const mealSections = activeDay ? extractMealSections(activeDay.content) : []
+  const activeDay = parsedDays[activeDayIndex];
+  const mealSections = activeDay ? extractMealSections(activeDay.content) : extractMealSections(dietPlan);
 
   return (
     <SafeAreaView style={[styles.container, { paddingTop: insets.top }]}>
@@ -301,23 +367,22 @@ const DietaGenerada = () => {
       {parsedDays.length > 1 && (
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.daysTabsContainer}>
           {parsedDays.map((day, index) => (
-            <DaySection
+            <Pressable 
               key={index}
-              day={day}
-              index={index}
-              activeDayIndex={activeDayIndex}
-              setActiveDayIndex={setActiveDayIndex}
-            />
+              style={[styles.dayTab, index === activeDayIndex && styles.activeDayTab]}
+              onPress={() => setActiveDayIndex(index)}
+            >
+              <Text style={[styles.dayTabText, index === activeDayIndex && styles.activeDayTabText]}>
+                {day.title.length > 10 ? `${day.title.substring(0, 10)}...` : day.title}
+              </Text>
+            </Pressable>
           ))}
         </ScrollView>
       )}
 
       <ScrollView contentContainerStyle={styles.scrollContainer}>
         <View style={styles.dietContainer}>
-          {/* Información nutricional si está disponible */}
-          <NutritionInfo content={activeDay.content} />
-
-          {/* Secciones de comidas */}
+          <NutritionInfo content={activeDay?.content || dietPlan} />
           {mealSections.map((meal, index) => (
             <MealSection key={index} title={meal.title} content={meal.content} />
           ))}
@@ -325,13 +390,7 @@ const DietaGenerada = () => {
       </ScrollView>
 
       <View style={styles.buttonContainer}>
-        <Pressable
-          style={styles.saveButton}
-          onPress={() => {
-            // Aquí puedes implementar la lógica para guardar la dieta
-            alert("Dieta guardada con éxito!")
-          }}
-        >
+        <Pressable style={styles.saveButton} onPress={saveDiet}>
           <LinearGradient
             colors={[COLORS.primary, COLORS.secondary]}
             style={styles.gradientButton}
@@ -344,8 +403,8 @@ const DietaGenerada = () => {
         </Pressable>
       </View>
     </SafeAreaView>
-  )
-}
+  );
+};
 
 const styles = StyleSheet.create({
   container: {

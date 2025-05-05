@@ -60,12 +60,25 @@ const useDietAPI = () => {
     return prompt;
   };
 
-  const generateDiet = async (userPreferences) => {
+  const saveDietToDB = async (userId, dietData) => {
+    try {
+      const response = await axios.post('http://192.168.1.115:3000/guardar-dieta', {
+        userId,
+        dietText: dietData.dietPlan,
+        preferences: dietData.preferences
+      });
+      return response.data;
+    } catch (err) {
+      console.error('Error al guardar la dieta:', err);
+      throw err;
+    }
+  };
+
+  const generateDiet = async (userPreferences, userId) => {
     setLoading(true);
     setError(null);
     
     try {
-      // Verificación básica de datos antes de hacer la llamada
       if (!userPreferences?.goal || !userPreferences?.dietType) {
         throw new Error('Faltan preferencias esenciales para generar la dieta');
       }
@@ -92,7 +105,7 @@ const useDietAPI = () => {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${'sk-e7a1e1740ae844fea047b7aac80488d4'}`
           },
-          timeout: 1000000 //un chingo de tiempo
+          timeout: 1000000
         }
       );
 
@@ -101,18 +114,25 @@ const useDietAPI = () => {
       }
 
       const generatedDiet = response.data.choices[0].message.content;
-      setDietData({
+      const dietData = {
         dietPlan: generatedDiet,
         preferences: userPreferences
-      });
-      return generatedDiet;
+      };
+      
+      // Guardar en MongoDB si hay userId
+      if (userId) {
+        await saveDietToDB(userId, dietData);
+      }
+      
+      setDietData(dietData);
+      return dietData;
+
     } catch (err) {
       console.error('Error al generar la dieta:', err);
       
       let errorMessage = 'Ocurrió un error al generar tu dieta. Por favor intenta nuevamente.';
       
       if (err.response) {
-        // Error con respuesta del servidor
         if (err.response.status === 402) {
           errorMessage = 'Error de suscripción: Verifica tu plan de pago con DeepSeek API.';
         } else if (err.response.status === 401) {
@@ -123,12 +143,10 @@ const useDietAPI = () => {
           errorMessage = `Error del servidor (${err.response.status}): ${err.response.data?.message || 'Sin detalles'}`;
         }
       } else if (err.request) {
-        // La solicitud fue hecha pero no hubo respuesta
         errorMessage = 'No se pudo conectar con el servidor. Verifica tu conexión a internet.';
       } else if (err.code === 'ECONNABORTED') {
         errorMessage = 'La solicitud tardó demasiado. Intenta nuevamente.';
       } else if (err.message) {
-        // Otro tipo de error
         errorMessage = err.message;
       }
       

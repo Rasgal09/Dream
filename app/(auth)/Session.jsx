@@ -38,6 +38,7 @@ const Session = () => {
       if (response.data.success) {
         // Guardar el correo en AsyncStorage
         await AsyncStorage.setItem('userEmail', correo.trim().toLowerCase());
+        await AsyncStorage.setItem('userId', response.data.usuario.id);
         router.replace('/Home');
       }
     } catch (error) {
