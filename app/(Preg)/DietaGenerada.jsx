@@ -1,5 +1,3 @@
-"use client"
-
 // components/DietaGenerada.jsx
 import { useEffect, useState } from "react"
 import {
