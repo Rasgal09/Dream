@@ -9,7 +9,9 @@ import {
   FlatList,
   Platform,
   TextInput,
-  StatusBar
+  StatusBar,
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { useFonts, SofiaSans_900Black } from '@expo-google-fonts/sofia-sans';
 import { Kanit_900Black } from '@expo-google-fonts/kanit';
@@ -17,6 +19,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
+import useDietApi from "./hooks/useDietApi"
 
 const { width, height } = Dimensions.get('window');
 
@@ -35,6 +38,7 @@ const COLORS = {
 
 const DietaPersonalizada = () => {
   const insets = useSafeAreaInsets();
+  const { generateDiet, loading, error } = useDietApi();
   
   // Fonts loading
   const [fontsLoaded] = useFonts({
@@ -240,7 +244,7 @@ const DietaPersonalizada = () => {
   };
 
   // Optimized next step function
-  const nextStep = () => {
+  const nextStep = async () => {
     if (step < steps.length - 1) {
       Animated.parallel([
         Animated.timing(fadeAnim, {
@@ -284,8 +288,18 @@ const DietaPersonalizada = () => {
         mealsPerDay,
         cookingTime
       };
-      console.log("Preferencias para dieta:", userPreferences);
-      router.replace('/DietaGenerada');
+      
+      // Generar la dieta
+      const dietPlan = await generateDiet(userPreferences);
+      
+      if (dietPlan) {
+        router.replace({
+          pathname: '/DietaGenerada',
+          params: { dietPlan: JSON.stringify(dietPlan) }
+        });
+      } else {
+        Alert.alert('Error', 'No se pudo generar la dieta. Por favor intenta nuevamente.');
+      }
     }
   };
 
@@ -749,7 +763,7 @@ const DietaPersonalizada = () => {
             isNextButtonDisabled() && styles.continueButtonDisabled
           ]}
           onPress={nextStep}
-          disabled={isNextButtonDisabled()}
+          disabled={isNextButtonDisabled() || loading}
           android_ripple={{ color: 'rgba(255, 255, 255, 0.2)' }}
         >
           <LinearGradient
@@ -758,15 +772,21 @@ const DietaPersonalizada = () => {
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
           >
-            <Text style={styles.buttonText}>
-              {step === steps.length - 1 ? 'GENERAR DIETA' : 'CONTINUAR'}
-            </Text>
-            <MaterialCommunityIcons 
-              name={step === steps.length - 1 ? "check" : "arrow-right"} 
-              size={20} 
-              color={COLORS.text} 
-              style={styles.buttonIcon}
-            />
+            {loading ? (
+              <ActivityIndicator color={COLORS.text} />
+            ) : (
+              <>
+                <Text style={styles.buttonText}>
+                  {step === steps.length - 1 ? 'GENERAR DIETA' : 'CONTINUAR'}
+                </Text>
+                <MaterialCommunityIcons 
+                  name={step === steps.length - 1 ? "check" : "arrow-right"} 
+                  size={20} 
+                  color={COLORS.text} 
+                  style={styles.buttonIcon}
+                />
+              </>
+            )}
           </LinearGradient>
         </Pressable>
       </Animated.View>

@@ -1,42 +1,19 @@
-//server.js
-const express = require('express');
-const { MongoClient } = require('mongodb');
-const cors = require('cors');
-const app = express();
+// src/controller/userController.js
+const { getCollection } = require('../db/connection');
+const { ObjectId } = require('mongodb');
 
-app.use(express.json());
-app.use(cors());
-
-const uri = 'mongodb://localhost:27017/Dreamer';
-const client = new MongoClient(uri);
-
-async function connectDB() {
-    try {
-        await client.connect();
-        console.log('Conectado a MongoDB');
-        app.listen(3000, () => {
-            console.log('Servidor escuchando en el puerto 3000');
-        });
-    } catch (error) {
-        console.error('Error al conectar a MongoDB:', error);
-    }
-}
-
-connectDB();
-
-// Ruta de registro (versión corregida)
-app.post('/registro', async (req, res) => {
+// Registro de usuario
+exports.registro = async (req, res) => {
     try {
         const { nombre, genero, edad, correo, contrasena, peso, altura } = req.body;
         
-        // Validaciones mejoradas
+        // Validaciones
         if (!nombre || !genero || !edad || !correo || !contrasena) {
             return res.status(400).json({ 
                 error: 'Todos los campos son requeridos: nombre, género, edad, correo, contraseña' 
             });
         }
 
-        // Validación específica para edad
         if (isNaN(edad) || edad < 10 || edad > 100) {
             return res.status(400).json({ 
                 error: 'La edad debe ser un número entre 10 y 100 años' 
@@ -55,19 +32,19 @@ app.post('/registro', async (req, res) => {
             });
         }
 
-        // Verificar si el usuario ya existe
-        const usuarioExistente = await client.db('Dreamer').collection('usuario').findOne({ correo });
+        const usuariosCollection = await getCollection('usuario');
+        const usuarioExistente = await usuariosCollection.findOne({ correo });
+        
         if (usuarioExistente) {
             return res.status(400).json({ 
                 error: 'El correo electrónico ya está registrado' 
             });
         }
 
-        // Insertar nuevo usuario con todos los campos
-        const result = await client.db('Dreamer').collection('usuario').insertOne({
+        const nuevoUsuario = {
             nombre,
             genero,
-            edad: parseInt(edad), // Aseguramos que sea número
+            edad: parseInt(edad),
             correo,
             contrasena,
             fechaRegistro: new Date(),
@@ -75,7 +52,9 @@ app.post('/registro', async (req, res) => {
             altura: altura ? parseFloat(altura) : null,
             rutinas: [],
             dietas: []
-        });
+        };
+
+        const result = await usuariosCollection.insertOne(nuevoUsuario);
         
         res.status(201).json({ 
             success: true,
@@ -96,10 +75,10 @@ app.post('/registro', async (req, res) => {
             detalle: error.message 
         });
     }
-});
+};
 
-// Ruta de login (actualizada para incluir edad)
-app.post('/login', async (req, res) => {
+// Login de usuario
+exports.login = async (req, res) => {
     try {
         const { correo, contrasena } = req.body;
         
@@ -109,7 +88,9 @@ app.post('/login', async (req, res) => {
             });
         }
 
-        const usuario = await client.db('Dreamer').collection('usuario').findOne({ correo });
+        const usuariosCollection = await getCollection('usuario');
+        const usuario = await usuariosCollection.findOne({ correo });
+        
         if (!usuario) {
             return res.status(400).json({ 
                 error: 'Usuario no encontrado' 
@@ -122,18 +103,19 @@ app.post('/login', async (req, res) => {
             });
         }
 
-        // Respuesta con todos los datos importantes
+        const respuestaUsuario = {
+            id: usuario._id,
+            nombre: usuario.nombre,
+            correo: usuario.correo,
+            edad: usuario.edad,
+            genero: usuario.genero,
+            peso: usuario.peso,
+            altura: usuario.altura
+        };
+
         res.status(200).json({ 
             success: true,
-            usuario: {
-                id: usuario._id,
-                nombre: usuario.nombre,
-                correo: usuario.correo,
-                edad: usuario.edad,
-                genero: usuario.genero,
-                peso: usuario.peso,
-                altura: usuario.altura
-            }
+            usuario: respuestaUsuario
         });
 
     } catch (error) {
@@ -143,10 +125,10 @@ app.post('/login', async (req, res) => {
             detalle: error.message 
         });
     }
-});
+};
 
-// Ruta para obtener datos de usuario (actualizada)
-app.get('/usuario', async (req, res) => {
+// Obtener datos de usuario
+exports.getUsuario = async (req, res) => {
     try {
         const { correo } = req.query;
         
@@ -156,7 +138,8 @@ app.get('/usuario', async (req, res) => {
             });
         }
 
-        const usuario = await client.db('Dreamer').collection('usuario').findOne({ correo });
+        const usuariosCollection = await getCollection('usuario');
+        const usuario = await usuariosCollection.findOne({ correo });
         
         if (!usuario) {
             return res.status(404).json({ 
@@ -164,13 +147,12 @@ app.get('/usuario', async (req, res) => {
             });
         }
 
-        // Eliminamos campos sensibles
         const { contrasena, _id, ...usuarioSeguro } = usuario;
         
         res.json({
             ...usuarioSeguro,
             id: _id,
-            edad: usuario.edad // Aseguramos que la edad esté incluida
+            edad: usuario.edad
         });
 
     } catch (error) {
@@ -180,36 +162,4 @@ app.get('/usuario', async (req, res) => {
             detalle: error.message 
         });
     }
-});
-
-app.post('/rutinas', async (req, res) => {
-    try {
-        const { userId, ...routineData } = req.body;
-        
-        const result = await client.db('Dreamer').collection('rutinas').insertOne({
-            userId,
-            ...routineData,
-            created: new Date()
-        });
-        
-        res.status(201).json(result.ops[0]);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Ruta para obtener rutinas por userId
-app.get('/rutinas', async (req, res) => {
-    try {
-        const { userId } = req.query;
-        
-        const routines = await client.db('Dreamer').collection('rutinas')
-            .find({ userId })
-            .sort({ created: -1 })
-            .toArray();
-            
-        res.json(routines);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
+};
