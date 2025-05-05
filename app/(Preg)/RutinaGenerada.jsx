@@ -18,6 +18,8 @@ import { useLocalSearchParams, router } from "expo-router"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
 import { LinearGradient } from "expo-linear-gradient"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get("window")
 
@@ -151,6 +153,44 @@ const RutinaGenerada = () => {
 
     return totalExercises > 0 ? (completedCount / totalExercises) * 100 : 0
   }
+
+  const handleSaveRoutine = async () => {
+    try {
+      setIsSaving(true);
+      
+      // Obtener el ID del usuario desde AsyncStorage
+      const userId = await AsyncStorage.getItem('userId');
+      if (!userId) {
+        throw new Error("Usuario no autenticado");
+      }
+  
+      // Validar que tenemos la rutina
+      if (!parsedRoutine) {
+        throw new Error("No hay datos de rutina para guardar");
+      }
+  
+      // Enviar al backend
+      const response = await axios.post('http://192.168.1.129:3000/api/routines/create', {
+        userId,
+        routineData: {
+          ...parsedRoutine,
+          name: parsedRoutine.name || "Mi Rutina Personalizada", // Nombre por defecto
+          progress: calculateProgress() // Opcional: guardar progreso actual
+        }
+      });
+  
+      // Navegar a la pantalla de rutinas guardadas
+      Alert.alert("Éxito", "Rutina guardada exitosamente", [
+        { text: "OK", onPress: () => router.push('/mis-rutinas') }
+      ]);
+  
+    } catch (error) {
+      console.error("Error al guardar:", error);
+      Alert.alert("Error", error.response?.data?.error || error.message || "Error desconocido");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   const progress = calculateProgress()
 
@@ -580,15 +620,7 @@ const RutinaGenerada = () => {
       <View style={styles.floatingButtonContainer}>
         <Pressable
           style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
-          onPress={() => {
-            setIsSaving(true)
-            // Lógica para guardar en MongoDB iría aquí
-            setTimeout(() => {
-              Alert.alert("Rutina guardada", "Tu rutina personalizada ha sido guardada exitosamente en tu perfil", [
-                { text: "OK", onPress: () => setIsSaving(false) },
-              ])
-            }, 1500)
-          }}
+          onPress={handleSaveRoutine}
           disabled={isSaving}
         >
           <LinearGradient

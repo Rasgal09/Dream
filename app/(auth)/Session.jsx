@@ -30,7 +30,7 @@ const Session = () => {
     setCargando(true);
   
     try {
-      const response = await axios.post('http://192.168.1.115:3000/login', {
+      const response = await axios.post('http://192.168.1.126:3000/api/users/login', {
         correo,
         contrasena
       });
@@ -38,6 +38,7 @@ const Session = () => {
       if (response.data.success) {
         // Guardar el correo en AsyncStorage antes de redirigir
         await AsyncStorage.setItem('userEmail', correo);
+        await AsyncStorage.setItem('userId', response.data.usuario.id);
         router.replace('/Home');
       }
     } catch (error) {

@@ -1,4 +1,4 @@
-// RoutinesScreen.js
+// RoutinesScreen.jsx
 import React, { useState } from 'react';
 import {
   View,
@@ -8,16 +8,13 @@ import {
   ScrollView,
   TextInput,
   Modal,
-  FlatList,
   StatusBar,
 } from 'react-native';
 import {
   Feather,
-  MaterialIcons,
-  Ionicons,
-  FontAwesome5,
   AntDesign,
 } from '@expo/vector-icons';
+import RoutineCard from '../../../components/Rutina';
 
 // Datos de ejemplo
 const initialRoutines = [
@@ -149,6 +146,7 @@ export default function RoutinesScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Rutinas</Text>
+        <Text style={styles.headerSubtitle}>Organiza tus entrenamientos</Text>
       </View>
 
       {/* Barra de búsqueda */}
@@ -185,7 +183,7 @@ export default function RoutinesScreen() {
             style={styles.actionButton}
             onPress={() => setShowNewRoutineModal(true)}
           >
-            <View style={styles.actionButtonIcon}>
+            <View style={[styles.actionButtonIcon, {backgroundColor: '#4285F4'}]}>
               <Feather name="file-plus" size={20} color="white" />
             </View>
             <Text style={styles.actionButtonText}>Nueva Rutina</Text>
@@ -195,7 +193,7 @@ export default function RoutinesScreen() {
             style={styles.actionButton}
             onPress={() => setShowNewFolderModal(true)}
           >
-            <View style={styles.actionButtonIcon}>
+            <View style={[styles.actionButtonIcon, {backgroundColor: '#FF9800'}]}>
               <Feather name="folder-plus" size={20} color="white" />
             </View>
             <Text style={styles.actionButtonText}>Nueva Carpeta</Text>
@@ -204,7 +202,7 @@ export default function RoutinesScreen() {
           <TouchableOpacity 
             style={styles.actionButton}
           >
-            <View style={styles.actionButtonIcon}>
+            <View style={[styles.actionButtonIcon, {backgroundColor: '#4CAF50'}]}>
               <Feather name="calendar" size={20} color="white" />
             </View>
             <Text style={styles.actionButtonText}>Programar</Text>
@@ -213,7 +211,7 @@ export default function RoutinesScreen() {
           <TouchableOpacity 
             style={styles.actionButton}
           >
-            <View style={styles.actionButtonIcon}>
+            <View style={[styles.actionButtonIcon, {backgroundColor: '#9C27B0'}]}>
               <Feather name="bar-chart-2" size={20} color="white" />
             </View>
             <Text style={styles.actionButtonText}>Estadísticas</Text>
@@ -229,13 +227,20 @@ export default function RoutinesScreen() {
             <Text style={styles.sectionTitle}>
               Resultados ({filteredRoutines.length})
             </Text>
-            {filteredRoutines.map(routine => (
-              <RoutineCard 
-                key={routine.id} 
-                routine={routine} 
-                onOptionsPress={() => showOptions(routine)} 
-              />
-            ))}
+            {filteredRoutines.length > 0 ? (
+              filteredRoutines.map(routine => (
+                <RoutineCard 
+                  key={routine.id} 
+                  routine={routine} 
+                  onOptionsPress={() => showOptions(routine)} 
+                />
+              ))
+            ) : (
+              <View style={styles.emptyState}>
+                <Feather name="search" size={40} color="#555" />
+                <Text style={styles.emptyStateText}>No se encontraron rutinas</Text>
+              </View>
+            )}
           </>
         ) : (
           // Carpetas y rutinas
@@ -258,9 +263,11 @@ export default function RoutinesScreen() {
                     </Text>
                   </View>
                   <View style={styles.folderControls}>
-                    <Text style={styles.folderCount}>
-                      {getRoutinesByFolder(folder).length}
-                    </Text>
+                    <View style={styles.folderCountBadge}>
+                      <Text style={styles.folderCount}>
+                        {getRoutinesByFolder(folder).length}
+                      </Text>
+                    </View>
                     <Feather 
                       name={expandedFolders[folder] ? "chevron-up" : "chevron-down"} 
                       size={20} 
@@ -280,9 +287,9 @@ export default function RoutinesScreen() {
                         />
                       ))
                     ) : (
-                      <View style={styles.emptyFolder}>
+                      <View style={styles.emptyState}>
                         <Feather name="inbox" size={40} color="#555" />
-                        <Text style={styles.emptyFolderText}>No hay rutinas en esta carpeta</Text>
+                        <Text style={styles.emptyStateText}>No hay rutinas en esta carpeta</Text>
                       </View>
                     )}
                   </View>
@@ -491,39 +498,6 @@ export default function RoutinesScreen() {
   );
 }
 
-// Componente de tarjeta de rutina
-const RoutineCard = ({ routine, onOptionsPress }) => {
-  return (
-    <View style={styles.routineCard}>
-      <View style={styles.routineCardHeader}>
-        <View style={[styles.routineColorTag, { backgroundColor: routine.color }]} />
-        <Text style={styles.routineName}>{routine.name}</Text>
-        <TouchableOpacity 
-          style={styles.routineOptionsButton}
-          onPress={onOptionsPress}
-        >
-          <Feather name="more-vertical" size={20} color="#999" />
-        </TouchableOpacity>
-      </View>
-      
-      <View style={styles.exercisesList}>
-        {routine.exercises.map((exercise, index) => (
-          <View key={index} style={styles.exerciseItem}>
-            <View style={styles.exerciseDot} />
-            <Text style={styles.exerciseText} numberOfLines={1}>
-              {exercise}
-            </Text>
-          </View>
-        ))}
-      </View>
-      
-      <TouchableOpacity style={styles.startButton}>
-        <Text style={styles.startButtonText}>Empezar Rutina</Text>
-      </TouchableOpacity>
-    </View>
-  );
-};
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -533,22 +507,32 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingTop: 60,
     paddingBottom: 15,
+    backgroundColor: '#1A1A1A',
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A2A2A',
   },
   headerTitle: {
     fontSize: 32,
     fontWeight: 'bold',
     color: 'white',
+    marginBottom: 5,
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#999',
   },
   searchContainer: {
     paddingHorizontal: 20,
-    marginBottom: 15,
+    paddingVertical: 15,
+    backgroundColor: '#1A1A1A',
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E1E1E',
+    backgroundColor: '#2A2A2A',
     borderRadius: 12,
     paddingHorizontal: 15,
+    height: 50,
   },
   searchIcon: {
     marginRight: 10,
@@ -556,35 +540,42 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     color: 'white',
-    paddingVertical: 12,
     fontSize: 16,
   },
   searchClearButton: {
     padding: 5,
   },
   actionButtonsContainer: {
-    marginBottom: 20,
+    paddingVertical: 15,
+    backgroundColor: '#1A1A1A',
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A2A2A',
   },
   actionButtons: {
     paddingHorizontal: 15,
   },
   actionButton: {
     alignItems: 'center',
-    marginHorizontal: 5,
-    width: 100,
+    marginHorizontal: 8,
+    width: 80,
   },
   actionButtonIcon: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#2A2A2A',
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
   },
   actionButtonText: {
     color: 'white',
     fontSize: 12,
+    textAlign: 'center',
   },
   content: {
     flex: 1,
@@ -593,7 +584,7 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 16,
     fontWeight: '500',
-    marginBottom: 15,
+    marginVertical: 15,
     paddingHorizontal: 20,
   },
   folderSection: {
@@ -606,6 +597,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingVertical: 12,
     backgroundColor: '#1A1A1A',
+    borderBottomWidth: 1,
+    borderBottomColor: '#2A2A2A',
   },
   folderTitleContainer: {
     flexDirection: 'row',
@@ -623,81 +616,30 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
   },
+  folderCountBadge: {
+    backgroundColor: '#2A2A2A',
+    borderRadius: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    marginRight: 10,
+  },
   folderCount: {
     color: '#999',
-    fontSize: 14,
-    marginRight: 10,
+    fontSize: 12,
+    fontWeight: '500',
   },
   routinesContainer: {
     paddingTop: 15,
   },
-  emptyFolder: {
+  emptyState: {
     alignItems: 'center',
     justifyContent: 'center',
     paddingVertical: 30,
   },
-  emptyFolderText: {
+  emptyStateText: {
     color: '#777',
     marginTop: 10,
     fontSize: 14,
-  },
-  routineCard: {
-    backgroundColor: '#1E1E1E',
-    borderRadius: 12,
-    marginHorizontal: 20,
-    marginBottom: 15,
-    padding: 15,
-    elevation: 2,
-  },
-  routineCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  routineColorTag: {
-    width: 4,
-    height: 20,
-    borderRadius: 2,
-    marginRight: 10,
-  },
-  routineName: {
-    flex: 1,
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
-  routineOptionsButton: {
-    padding: 5,
-  },
-  exercisesList: {
-    marginBottom: 15,
-  },
-  exerciseItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  exerciseDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-    backgroundColor: '#777',
-    marginRight: 8,
-  },
-  exerciseText: {
-    color: '#AAA',
-    fontSize: 14,
-  },
-  startButton: {
-    backgroundColor: '#4285F4',
-    borderRadius: 8,
-    paddingVertical: 12,
-    alignItems: 'center',
-  },
-  startButtonText: {
-    color: 'white',
-    fontSize: 15,
-    fontWeight: '600',
   },
   modalOverlay: {
     flex: 1,
@@ -742,6 +684,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 15,
     fontSize: 16,
     marginBottom: 20,
+    height: 50,
   },
   modalLabel: {
     color: 'white',

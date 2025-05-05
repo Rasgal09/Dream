@@ -1,5 +1,3 @@
-"use client"
-
 // components/DietaGenerada.jsx
 import { useEffect, useState } from "react"
 import {
@@ -11,12 +9,16 @@ import {
   SafeAreaView,
   Pressable,
   TouchableOpacity,
+
 } from "react-native"
 import { useLocalSearchParams, useRouter } from "expo-router"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
 import { LinearGradient } from "expo-linear-gradient"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Clipboard } from "react-native"
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Alert } from "react-native"
 
 const COLORS = {
   background: "#1A1A1A",
@@ -187,7 +189,7 @@ const NutritionInfo = ({ content }) => {
 }
 
 // Componente principal
-const DietaGenerada = () => {
+const DietaGenerada = (route ) => {
   const insets = useSafeAreaInsets()
   const router = useRouter()
   const params = useLocalSearchParams()
@@ -197,22 +199,57 @@ const DietaGenerada = () => {
   const [activeDayIndex, setActiveDayIndex] = useState(0)
   const [copied, setCopied] = useState(false)
 
-  useEffect(() => {
-    if (params.dietPlan) {
-      try {
-        const parsedPlan = JSON.parse(params.dietPlan)
-        setDietPlan(parsedPlan)
+    // Función auxiliar para extraer información nutricional (COLOCAR ANTES DE handleSaveDiet)
+    const extractNutritionalInfo = (content) => {
+        return {
+            calories: content.match(/(\d+)\s*(?:kcal|calorías)/i)?.[1] || "N/A",
+            protein: content.match(/(\d+)g\s*proteínas/i)?.[1] || "N/A",
+            carbs: content.match(/(\d+)g\s*carbohidratos/i)?.[1] || "N/A",
+            fats: content.match(/(\d+)g\s*grasas/i)?.[1] || "N/A"
+        };
+    };
 
-        // Parsear el plan en días
-        const days = parseDietPlan(parsedPlan)
-        setParsedDays(days)
-      } catch (e) {
-        console.error("Error parsing diet plan:", e)
-      } finally {
-        setLoading(false)
+    const handleSaveDiet = async () => {
+      try {
+        const userId = await AsyncStorage.getItem('userId');
+        
+  
+        const dietData = {
+          name: parsedDays[0]?.title || "Mi Dieta Personalizada",
+          content: dietPlan,
+          days: parsedDays,
+          nutritionalInfo: extractNutritionalInfo(parsedDays[activeDayIndex].content)
+        };
+  
+        await axios.post('http://192.168.1.115:3000/api/diets/create', {
+          userId,
+          dietData
+        });
+  
+        Alert.alert("Éxito", "Dieta guardada exitosamente");
+        router.push('/mis-dietas');
+  
+      } catch (error) {
+        console.error("Error al guardar:", error);
+        Alert.alert("Error", error.response?.data?.error || "Error desconocido");
       }
-    }
-  }, [params.dietPlan])
+    };
+  
+    useEffect(() => {
+      if (params.dietPlan) {
+        try {
+          const parsedPlan = JSON.parse(params.dietPlan);
+          setDietPlan(parsedPlan);
+          const days = parseDietPlan(parsedPlan);
+          setParsedDays(days);
+        } catch (e) {
+          console.error("Error parsing diet plan:", e);
+        } finally {
+          setLoading(false);
+        }
+      }
+    }, [params.dietPlan]);
+  
 
   const copyToClipboard = () => {
     if (dietPlan) {
@@ -327,13 +364,7 @@ const DietaGenerada = () => {
       </ScrollView>
 
       <View style={styles.buttonContainer}>
-        <Pressable
-          style={styles.saveButton}
-          onPress={() => {
-            // Aquí puedes implementar la lógica para guardar la dieta
-            alert("Dieta guardada con éxito!")
-          }}
-        >
+        <Pressable style={styles.saveButton} onPress={handleSaveDiet}>
           <LinearGradient
             colors={[COLORS.primary, COLORS.secondary]}
             style={styles.gradientButton}
