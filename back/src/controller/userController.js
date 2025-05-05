@@ -88,14 +88,10 @@ exports.login = async (req, res) => {
             });
         }
 
+        // Línea corregida
         const usuariosCollection = await getCollection('usuario');
         const usuario = await usuariosCollection.findOne({ correo });
-        
-        if (!usuario) {
-            return res.status(400).json({ 
-                error: 'Usuario no encontrado' 
-            });
-        }
+
 
         if (contrasena !== usuario.contrasena) {
             return res.status(400).json({ 
@@ -103,20 +99,20 @@ exports.login = async (req, res) => {
             });
         }
 
-        const respuestaUsuario = {
-            id: usuario._id,
-            nombre: usuario.nombre,
-            correo: usuario.correo,
-            edad: usuario.edad,
-            genero: usuario.genero,
-            peso: usuario.peso,
-            altura: usuario.altura
-        };
-
+        // Respuesta con todos los datos importantes
         res.status(200).json({ 
             success: true,
-            usuario: respuestaUsuario
+            usuario: {
+                id: usuario._id,
+                nombre: usuario.nombre,
+                correo: usuario.correo,
+                edad: usuario.edad,
+                genero: usuario.genero,
+                peso: usuario.peso,
+                altura: usuario.altura
+            }
         });
+
 
     } catch (error) {
         console.error('Error al iniciar sesión:', error);
@@ -128,6 +124,7 @@ exports.login = async (req, res) => {
 };
 
 // Obtener datos de usuario
+// En src/controller/userController.js, modifica el método getUsuario:
 exports.getUsuario = async (req, res) => {
     try {
         const { correo } = req.query;
@@ -138,6 +135,7 @@ exports.getUsuario = async (req, res) => {
             });
         }
 
+        // Línea corregida (elimina client y usa getCollection)
         const usuariosCollection = await getCollection('usuario');
         const usuario = await usuariosCollection.findOne({ correo });
         
@@ -147,12 +145,16 @@ exports.getUsuario = async (req, res) => {
             });
         }
 
-        const { contrasena, _id, ...usuarioSeguro } = usuario;
-        
-        res.json({
-            ...usuarioSeguro,
-            id: _id,
-            edad: usuario.edad
+        res.status(200).json({
+            nombre: usuario.nombre,
+            genero: usuario.genero,
+            edad: usuario.edad,
+            correo: usuario.correo,
+            peso: usuario.peso,
+            altura: usuario.altura,
+            fechaRegistro: usuario.fechaRegistro,
+            rutinas: usuario.rutinas || [],
+            dietas: usuario.dietas || []
         });
 
     } catch (error) {
