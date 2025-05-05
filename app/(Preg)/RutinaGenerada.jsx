@@ -170,7 +170,7 @@ const RutinaGenerada = () => {
       }
   
       // Enviar al backend
-      const response = await axios.post('http://192.168.1.126:3000/api/routines/create', {
+      const response = await axios.post('http://192.168.1.129:3000/api/routines/create', {
         userId,
         routineData: {
           ...parsedRoutine,

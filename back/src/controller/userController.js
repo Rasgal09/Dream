@@ -103,7 +103,7 @@ exports.login = async (req, res) => {
         res.status(200).json({ 
             success: true,
             usuario: {
-                id: usuario._id,
+                id: usuario._id.toString(),
                 nombre: usuario.nombre,
                 correo: usuario.correo,
                 edad: usuario.edad,

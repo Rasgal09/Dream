@@ -9,6 +9,7 @@ import {
   SafeAreaView,
   Pressable,
   TouchableOpacity,
+
 } from "react-native"
 import { useLocalSearchParams, useRouter } from "expo-router"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
@@ -17,6 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { Clipboard } from "react-native"
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { Alert } from "react-native"
 
 const COLORS = {
   background: "#1A1A1A",
@@ -219,7 +221,7 @@ const DietaGenerada = (route ) => {
           nutritionalInfo: extractNutritionalInfo(parsedDays[activeDayIndex].content)
         };
   
-        await axios.post('http://192.168.1.126:3000/api/diets/create', {
+        await axios.post('http://192.168.1.115:3000/api/diets/create', {
           userId,
           dietData
         });
