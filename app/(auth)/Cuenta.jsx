@@ -8,6 +8,7 @@ import { LinearGradient } from "expo-linear-gradient"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
 import { router } from "expo-router"
 import axios from "axios"
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get("window")
 const ITEM_HEIGHT = 60
@@ -360,7 +361,10 @@ const RegistroCompleto = () => {
         })
 
         console.log('Registro exitoso:', response.data)
-        router.replace("/Home")
+        
+        // Guardar el correo en AsyncStorage antes de redirigir
+        await AsyncStorage.setItem('userEmail', correo.trim().toLowerCase());
+        router.replace("/Home");
       } catch (error) {
         console.error('Error en registro:', error.response?.data || error.message)
         Alert.alert(

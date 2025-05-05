@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -11,15 +11,18 @@ import {
   FlatList,
   StatusBar,
   ActivityIndicator,
-} from "react-native"
-import { LinearGradient } from "expo-linear-gradient"
-import { Ionicons, MaterialIcons, Feather, FontAwesome } from "@expo/vector-icons"
-import { useColorScheme } from "react-native"
-import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { Kanit_400Regular, Kanit_500Medium, Kanit_700Bold, useFonts } from "@expo-google-fonts/kanit"
-import { SofiaSans_400Regular, SofiaSans_500Medium } from "@expo-google-fonts/sofia-sans"
-import { Colors } from "../../assets/Colors"
-
+} from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
+import { Ionicons, MaterialIcons, Feather, FontAwesome } from "@expo/vector-icons";
+import { useColorScheme } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Kanit_400Regular, Kanit_500Medium, Kanit_700Bold, useFonts } from "@expo-google-fonts/kanit";
+import { SofiaSans_400Regular, SofiaSans_500Medium } from "@expo-google-fonts/sofia-sans";
+import { Colors } from "../../assets/Colors";
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import axios from 'axios';
+import { useNavigation } from '@react-navigation/native';
+import { useRouter } from 'expo-router';
 
 // Definición de secciones para FlatList
 const createSettingsSections = () => [
@@ -71,87 +74,157 @@ const createSettingsSections = () => [
     id: "version",
     type: "version",
   },
-]
+];
 
-const SettingsScreen = ({ navigation }) => {
-  const insets = useSafeAreaInsets()
-  const deviceTheme = useColorScheme()
-  const [theme, setTheme] = useState("system") // 'light', 'dark', 'system'
-  const [isDarkMode, setIsDarkMode] = useState(false)
-  const [emailModalVisible, setEmailModalVisible] = useState(false)
-  const [passwordModalVisible, setPasswordModalVisible] = useState(false)
-  const [newEmail, setNewEmail] = useState("")
-  const [currentPassword, setCurrentPassword] = useState("")
-  const [newPassword, setNewPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  const [notifications, setNotifications] = useState(true)
-  const [language, setLanguage] = useState("Español")
-  const [units, setUnits] = useState("Métrico") // Métrico o Imperial
-  const [settingsSections] = useState(createSettingsSections())
+const SettingsScreen = () => {
+  const router = useRouter();
+  const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
+  const deviceTheme = useColorScheme();
+  const [theme, setTheme] = useState("system");
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [emailModalVisible, setEmailModalVisible] = useState(false);
+  const [passwordModalVisible, setPasswordModalVisible] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [notifications, setNotifications] = useState(true);
+  const [language, setLanguage] = useState("Español");
+  const [units, setUnits] = useState("Métrico");
+  const [settingsSections] = useState(createSettingsSections());
+  const [userData, setUserData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Cargar fuentes usando el hook de Expo Google Fonts
+  // Cargar fuentes
   const [fontsLoaded] = useFonts({
     Kanit_400Regular,
     Kanit_500Medium,
     Kanit_700Bold,
     SofiaSans_400Regular,
     SofiaSans_500Medium,
-  })
+  });
 
-  // Función para cambiar el tema
+  // Cargar datos del usuario
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const userEmail = await AsyncStorage.getItem("userEmail");
+        if (!userEmail) throw new Error("No hay usuario logueado");
+
+        const response = await axios.get(`http://192.168.1.115:3000/usuario?correo=${encodeURIComponent(userEmail)}`);
+        if (!response.data) throw new Error("No se recibieron datos del usuario");
+
+        setUserData(response.data);
+      } catch (error) {
+        console.error("Error al obtener datos del usuario:", error);
+        Alert.alert("Error", "No se pudieron cargar los datos del usuario");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserData();
+  }, []);
+
+  // Cambiar tema
   const toggleDarkMode = () => {
-    setIsDarkMode(!isDarkMode)
-    setTheme(isDarkMode ? "light" : "dark")
-  }
+    setIsDarkMode(!isDarkMode);
+    setTheme(isDarkMode ? "light" : "dark");
+  };
 
-  // Función para seleccionar un tema específico
+  // Seleccionar tema específico
   const selectTheme = (selectedTheme) => {
-    setTheme(selectedTheme)
+    setTheme(selectedTheme);
     if (selectedTheme === "dark") {
-      setIsDarkMode(true)
+      setIsDarkMode(true);
     } else if (selectedTheme === "light") {
-      setIsDarkMode(false)
+      setIsDarkMode(false);
     } else {
-      // Si es 'system', usar el tema del dispositivo
-      setIsDarkMode(deviceTheme === "dark")
+      setIsDarkMode(deviceTheme === "dark");
     }
-  }
+  };
 
-  // Función para cambiar el correo
-  const handleEmailChange = () => {
-    if (newEmail.trim() === "") {
-      Alert.alert("Error", "Por favor ingresa un correo válido")
-      return
-    }
-
-    // Aquí iría la lógica para cambiar el correo en la base de datos
-    Alert.alert("Éxito", "Tu correo ha sido actualizado correctamente")
-    setEmailModalVisible(false)
-    setNewEmail("")
-  }
-
-  // Función para cambiar la contraseña
-  const handlePasswordChange = () => {
+  // Cambiar contraseña
+  const handlePasswordChange = async () => {
     if (currentPassword.trim() === "" || newPassword.trim() === "" || confirmPassword.trim() === "") {
-      Alert.alert("Error", "Por favor completa todos los campos")
-      return
+      Alert.alert("Error", "Por favor completa todos los campos");
+      return;
     }
 
     if (newPassword !== confirmPassword) {
-      Alert.alert("Error", "Las contraseñas no coinciden")
-      return
+      Alert.alert("Error", "Las contraseñas no coinciden");
+      return;
     }
 
-    // Aquí iría la lógica para cambiar la contraseña en la base de datos
-    Alert.alert("Éxito", "Tu contraseña ha sido actualizada correctamente")
-    setPasswordModalVisible(false)
-    setCurrentPassword("")
-    setNewPassword("")
-    setConfirmPassword("")
-  }
+    if (newPassword.length < 4) {
+      Alert.alert("Error", "La contraseña debe tener al menos 4 caracteres");
+      return;
+    }
 
-  // Función para cerrar sesión
-  const handleLogout = () => {
+    try {
+      const response = await axios.put('http://192.168.1.115:3000/usuario/contrasena', {
+        correo: userData.correo,
+        contrasenaActual: currentPassword,
+        nuevaContrasena: newPassword
+      });
+
+      if (response.data.success) {
+        Alert.alert("Éxito", "Tu contraseña ha sido actualizada correctamente");
+        setPasswordModalVisible(false);
+        setCurrentPassword("");
+        setNewPassword("");
+        setConfirmPassword("");
+      } else {
+        Alert.alert("Error", response.data.error || "Error al actualizar la contraseña");
+      }
+    } catch (error) {
+      console.error("Error al cambiar contraseña:", error);
+      Alert.alert("Error", error.response?.data?.error || "Error en el servidor al cambiar la contraseña");
+    }
+  };
+
+  const handleEmailChange = async () => {
+    if (newEmail.trim() === "") {
+        Alert.alert("Error", "Por favor ingresa un correo válido");
+        return;
+    }
+
+    if (currentPassword.trim() === "") {
+        Alert.alert("Error", "Por favor ingresa tu contraseña actual");
+        return;
+    }
+
+    // Validación de formato de correo
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(newEmail)) {
+        Alert.alert("Error", "Formato de correo electrónico inválido");
+        return;
+    }
+
+    try {
+        const response = await axios.put('http://192.168.1.115:3000/usuario/correo', {
+            correoActual: userData.correo,
+            nuevoCorreo: newEmail.trim().toLowerCase(),
+            contrasena: currentPassword
+        });
+
+        if (response.data.success) {
+            await AsyncStorage.setItem("userEmail", newEmail.trim().toLowerCase());
+            setUserData({ ...userData, correo: newEmail.trim().toLowerCase() });
+            Alert.alert("Éxito", "Tu correo ha sido actualizado correctamente");
+            setEmailModalVisible(false);
+            setNewEmail("");
+            setCurrentPassword("");
+        } else {
+            Alert.alert("Error", response.data.error || "Error al actualizar el correo");
+        }
+    } catch (error) {
+        console.error("Error al cambiar correo:", error);
+        Alert.alert("Error", error.response?.data?.error || "Error en el servidor al cambiar el correo");
+    }
+};
+  // Cerrar sesión
+  const handleLogout = async () => {
     Alert.alert("Cerrar sesión", "¿Estás seguro que deseas cerrar sesión?", [
       {
         text: "Cancelar",
@@ -159,19 +232,25 @@ const SettingsScreen = ({ navigation }) => {
       },
       {
         text: "Sí, cerrar sesión",
-        onPress: () => {
-          // Aquí iría la lógica para cerrar sesión
-          console.log("Usuario cerró sesión")
+        onPress: async () => {
+          try {
+            await AsyncStorage.removeItem("userEmail");
+            // Reemplaza toda la pila de navegación
+            router.replace('/(auth)/Session');
+          } catch (error) {
+            console.error("Error al cerrar sesión:", error);
+            Alert.alert("Error", "Ocurrió un problema al cerrar sesión");
+          }
         },
       },
-    ])
-  }
+    ]);
+  };
 
-  // Renderizar cada tipo de elemento
+  // Renderizar cada elemento de configuración
   const renderItem = ({ item }) => {
     switch (item.type) {
       case "section":
-        return <Text style={styles.sectionTitle}>{item.title}</Text>
+        return <Text style={styles.sectionTitle}>{item.title}</Text>;
 
       case "accountCard":
         return (
@@ -184,8 +263,8 @@ const SettingsScreen = ({ navigation }) => {
                 <MaterialIcons name="email" size={22} color={Colors.text1} />
               </View>
               <View style={styles.settingTextContainer}>
-                <Text style={styles.settingLabel}>Cambiar correo electrónico</Text>
-                <Text style={styles.settingValue}>usuario@ejemplo.com</Text>
+                <Text style={styles.settingLabel}>Correo electrónico</Text>
+                <Text style={styles.settingValue}>{userData?.correo || "Cargando..."}</Text>
               </View>
               <Ionicons name="chevron-forward" size={22} color={Colors.text1} />
             </Pressable>
@@ -204,7 +283,7 @@ const SettingsScreen = ({ navigation }) => {
               <Ionicons name="chevron-forward" size={22} color={Colors.text1} />
             </Pressable>
           </View>
-        )
+        );
 
       case "darkModeCard":
         return (
@@ -225,7 +304,7 @@ const SettingsScreen = ({ navigation }) => {
               />
             </View>
           </View>
-        )
+        );
 
       case "themeCard":
         return (
@@ -287,7 +366,7 @@ const SettingsScreen = ({ navigation }) => {
               )}
             </Pressable>
           </View>
-        )
+        );
 
       case "preferencesCard":
         return (
@@ -330,7 +409,7 @@ const SettingsScreen = ({ navigation }) => {
               <Ionicons name="chevron-forward" size={22} color={Colors.text1} />
             </Pressable>
           </View>
-        )
+        );
 
       case "helpCard":
         return (
@@ -365,7 +444,7 @@ const SettingsScreen = ({ navigation }) => {
               <Ionicons name="chevron-forward" size={22} color={Colors.text1} />
             </Pressable>
           </View>
-        )
+        );
 
       case "logout":
         return (
@@ -379,22 +458,22 @@ const SettingsScreen = ({ navigation }) => {
               <Text style={styles.logoutButtonText}>Cerrar Sesión</Text>
             </LinearGradient>
           </Pressable>
-        )
+        );
 
       case "version":
-        return <Text style={styles.versionText}>Versión 1.0.0</Text>
+        return <Text style={styles.versionText}>Versión 1.0.0</Text>;
 
       default:
-        return null
+        return null;
     }
-  }
+  };
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded || loading) {
     return (
       <View style={[styles.container, { justifyContent: "center", alignItems: "center" }]}>
         <ActivityIndicator size="large" color={Colors.grad1} />
       </View>
-    )
+    );
   }
 
   return (
@@ -439,6 +518,15 @@ const SettingsScreen = ({ navigation }) => {
               onChangeText={setNewEmail}
               keyboardType="email-address"
               autoCapitalize="none"
+            />
+
+            <TextInput
+              style={styles.input}
+              placeholder="Contraseña actual"
+              placeholderTextColor="#888"
+              value={currentPassword}
+              onChangeText={setCurrentPassword}
+              secureTextEntry
             />
 
             <View style={styles.modalButtons}>
@@ -515,9 +603,10 @@ const SettingsScreen = ({ navigation }) => {
         </View>
       </Modal>
     </View>
-  )
-}
+  );
+};
 
+// Estilos
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -542,9 +631,6 @@ const styles = StyleSheet.create({
   listContainer: {
     paddingHorizontal: 20,
     paddingBottom: 20,
-  },
-  section: {
-    marginTop: 20,
   },
   sectionTitle: {
     color: Colors.text1,
@@ -690,6 +776,6 @@ const styles = StyleSheet.create({
     color: Colors.text2,
     fontFamily: "Kanit_500Medium",
   },
-})
+});
 
-export default SettingsScreen
+export default SettingsScreen;

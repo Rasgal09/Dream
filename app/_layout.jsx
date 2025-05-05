@@ -26,6 +26,7 @@ export default function RootLayout() {
       <Stack.Screen name="index" />
       <Stack.Screen name="(auth)" options={{ headerShown: false }} />
       <Stack.Screen name="(drawer)" options={{ headerShown: false }} />
+      
     </Stack>
   );
 }

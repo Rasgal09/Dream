@@ -144,7 +144,7 @@ app.post('/login', async (req, res) => {
     }
 });
 
-// Ruta para obtener datos de usuario (actualizada)
+// Ruta para obtener datos de usuario (corregida)
 app.get('/usuario', async (req, res) => {
     try {
         const { correo } = req.query;
@@ -163,13 +163,17 @@ app.get('/usuario', async (req, res) => {
             });
         }
 
-        // Eliminamos campos sensibles
-        const { contrasena, _id, ...usuarioSeguro } = usuario;
-        
-        res.json({
-            ...usuarioSeguro,
-            id: _id,
-            edad: usuario.edad // Aseguramos que la edad esté incluida
+        // Devuelve todos los datos relevantes del usuario
+        res.status(200).json({
+            nombre: usuario.nombre,
+            genero: usuario.genero,
+            edad: usuario.edad,
+            correo: usuario.correo,
+            peso: usuario.peso,
+            altura: usuario.altura,
+            fechaRegistro: usuario.fechaRegistro,
+            rutinas: usuario.rutinas || [],
+            dietas: usuario.dietas || []
         });
 
     } catch (error) {

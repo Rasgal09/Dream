@@ -36,8 +36,8 @@ const Session = () => {
       });
   
       if (response.data.success) {
-        // Guardar el correo en AsyncStorage antes de redirigir
-        await AsyncStorage.setItem('userEmail', correo);
+        // Guardar el correo en AsyncStorage
+        await AsyncStorage.setItem('userEmail', correo.trim().toLowerCase());
         router.replace('/Home');
       }
     } catch (error) {
@@ -46,7 +46,7 @@ const Session = () => {
     } finally {
       setCargando(false);
     }
-  };
+};
 
   if (!fontsLoaded) return null;
 
