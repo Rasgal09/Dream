@@ -1,7 +1,7 @@
 import { useState, useCallback } from "react"
 import axios from "axios"
 
-const EXERCISEDB_API_KEY = "a6ce31be52msh0865311e56b9f0ep1a9a22jsn79b4d4d83af"
+const EXERCISEDB_API_KEY = "a6274e3c00msh8c65ec95c6a1832p1b06adjsn0221ccf3d3c4"
 
 export const useRoutineAPI = (exercises) => {
   const [loading, setLoading] = useState(false)

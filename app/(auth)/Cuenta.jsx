@@ -349,18 +349,20 @@ const RegistroCompleto = () => {
       try {
         setIsSubmitting(true)
         
-        const response = await axios.post('http://192.168.1.115:3000/registro', {
+         // 1. Captura la respuesta correctamente
+        const response = await axios.post('http://192.168.1.126:3000/api/users/registro', {
           nombre: nombre.trim(),
           genero: selectedSex,
           edad: selectedAge,
           correo: correo.trim().toLowerCase(),
           contrasena: contrasena,
           peso: selectedWeight,
-          altura: selectedHeight / 100
-        })
+          altura: selectedHeight 
+        });
 
-        console.log('Registro exitoso:', response.data)
-        router.replace("/Home")
+        // 2. Ahora response está definido
+        console.log('Registro exitoso:', response.data);
+        router.replace("/Home");
       } catch (error) {
         console.error('Error en registro:', error.response?.data || error.message)
         Alert.alert(
