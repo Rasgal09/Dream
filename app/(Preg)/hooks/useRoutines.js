@@ -1,39 +1,26 @@
-// hooks/useRoutines.js
-import { useState, useEffect } from 'react'
-import { fetchUserRoutines, saveRoutineToDB } from '../services/routineService'
+import axios from 'axios';
 
 export const useRoutines = (userId) => {
-  const [routines, setRoutines] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+    const saveRoutine = async (routineData) => {
+        try {
+            const response = await axios.post('http://192.168.1.126:3000/api/routines/create', {
+                userId,
+                routineData
+            });
+            return response.data;
+        } catch (error) {
+            throw new Error(error.response?.data?.error || 'Error al guardar la rutina');
+        }
+    };
 
-  useEffect(() => {
-    const loadRoutines = async () => {
-      try {
-        const data = await fetchUserRoutines(userId)
-        setRoutines(data)
-      } catch (err) {
-        setError(err.message)
-      } finally {
-        setLoading(false)
-      }
-    }
-    loadRoutines()
-  }, [userId])
+    const getUserRoutines = async () => {
+        try {
+            const response = await axios.get(`http://192.168.1.126:3000/api/routines/user-routines?userId=${userId}`);
+            return response.data;
+        } catch (error) {
+            throw new Error(error.response?.data?.error || 'Error al obtener rutinas');
+        }
+    };
 
-  const saveRoutine = async (routineData) => {
-    try {
-      setLoading(true)
-      const savedRoutine = await saveRoutineToDB(userId, routineData)
-      setRoutines(prev => [...prev, savedRoutine])
-      return savedRoutine
-    } catch (err) {
-      setError(err.message)
-      throw err
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  return { routines, loading, error, saveRoutine }
-}
+    return { saveRoutine, getUserRoutines };
+};

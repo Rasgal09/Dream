@@ -1,14 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const {
-  createRoutine,
-  getUserRoutines
-} = require('../controller/routineController');
+const routineController = require('../controller/routineController');
 
-// Crear nueva rutina
-router.post('/', createRoutine);
-
-// Obtener rutinas del usuario
-router.get('/', getUserRoutines);
+router.post('/create', routineController.createRoutine);
+router.get('/user-routines', routineController.getUserRoutines);
 
 module.exports = router;

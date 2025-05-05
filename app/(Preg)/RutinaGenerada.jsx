@@ -18,7 +18,8 @@ import { useLocalSearchParams, router } from "expo-router"
 import { MaterialCommunityIcons } from "@expo/vector-icons"
 import { LinearGradient } from "expo-linear-gradient"
 import { useSafeAreaInsets } from "react-native-safe-area-context"
-import { useRoutines } from './hooks/useRoutines'
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width } = Dimensions.get("window")
 
@@ -50,23 +51,12 @@ const RutinaGenerada = () => {
   const [completedExercises, setCompletedExercises] = useState({})
   const [showInfo, setShowInfo] = useState(false)
   const [expandedExercise, setExpandedExercise] = useState(null)
-  const [userId, setUserId] = useState(null)
-  const { saveRoutine } = useRoutines(userId)
 
   // Animaciones
   const fadeAnim = useRef(new Animated.Value(0)).current
   const slideAnim = useRef(new Animated.Value(50)).current
 
   useEffect(() => {
-    const storedUserId = localStorage.getItem('userId');
-    if (!storedUserId) {
-      // Generar un ID único si no existe
-      const newUserId = `user_${Date.now()}`;
-      localStorage.setItem('userId', newUserId);
-      setUserId(newUserId);
-  } else {
-      setUserId(storedUserId);
-  }
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -78,8 +68,8 @@ const RutinaGenerada = () => {
         duration: 500,
         useNativeDriver: true,
       }),
-    ]).start();
-  }, []);
+    ]).start()
+  }, [])
 
   // Añadir manejo de errores para el parsing de JSON
   let parsedRoutine
@@ -164,82 +154,70 @@ const RutinaGenerada = () => {
     return totalExercises > 0 ? (completedCount / totalExercises) * 100 : 0
   }
 
+  const handleSaveRoutine = async () => {
+    try {
+      setIsSaving(true);
+      
+      // Obtener el ID del usuario desde AsyncStorage
+      const userId = await AsyncStorage.getItem('userId');
+      if (!userId) {
+        throw new Error("Usuario no autenticado");
+      }
+  
+      // Validar que tenemos la rutina
+      if (!parsedRoutine) {
+        throw new Error("No hay datos de rutina para guardar");
+      }
+  
+      // Enviar al backend
+      const response = await axios.post('http://192.168.1.126:3000/api/routines/create', {
+        userId,
+        routineData: {
+          ...parsedRoutine,
+          name: parsedRoutine.name || "Mi Rutina Personalizada", // Nombre por defecto
+          progress: calculateProgress() // Opcional: guardar progreso actual
+        }
+      });
+  
+      // Navegar a la pantalla de rutinas guardadas
+      Alert.alert("Éxito", "Rutina guardada exitosamente", [
+        { text: "OK", onPress: () => router.push('/mis-rutinas') }
+      ]);
+  
+    } catch (error) {
+      console.error("Error al guardar:", error);
+      Alert.alert("Error", error.response?.data?.error || error.message || "Error desconocido");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const progress = calculateProgress()
 
-  const handleSaveRoutine = async () => {
-        if (!userId) {
-            Alert.alert("Error", "No se pudo identificar al usuario");
-            return;
-        }
-
-        setIsSaving(true);
-        try {
-            await saveRoutineToDB(userId, {
-                ...routineData,
-                created: new Date().toISOString()
-            });
-            
-            Alert.alert("Éxito", "Rutina guardada exitosamente");
-            router.push('/mis-rutinas');
-            
-        } catch (error) {
-            Alert.alert("Error", error.message);
-        } finally {
-            setIsSaving(false);
-        }
-    };
   // Mostrar pantalla de error si no hay datos
-   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
-      <Animated.View style={[styles.header, { opacity: fadeAnim }]}>
-        <View style={styles.headerTop}>
-          <Pressable onPress={() => router.back()} style={styles.backButton}>
-            <MaterialCommunityIcons name="arrow-left" size={24} color={COLORS.text} />
-          </Pressable>
-          <Text style={styles.title}>Tu Rutina Personalizada</Text>
-        </View>
-      </Animated.View>
-
-      <ScrollView style={styles.content}>
-        {weekDays.map((dayKey, index) => (
-          <View key={dayKey} style={styles.dayCard}>
-            <Text style={styles.dayTitle}>{parsedRoutine.weekly_schedule[dayKey].day_name}</Text>
-            {parsedRoutine.weekly_schedule[dayKey].exercises.map((exercise, exIndex) => (
-              <Pressable
-                key={exIndex}
-                style={styles.exerciseCard}
-                onPress={() => setExpandedExercise({ dayKey, exercise })}>
-                <Text style={styles.exerciseName}>{exercise.name}</Text>
-                <Pressable
-                  onPress={(e) => {
-                    e.stopPropagation();
-                    toggleExerciseCompletion(dayKey, exIndex);
-                  }}>
-                  <MaterialCommunityIcons
-                    name={completedExercises[`${dayKey}-${exIndex}`] ? "check-circle" : "circle-outline"}
-                    size={24}
-                    color={COLORS.primary}
-                  />
-                </Pressable>
-              </Pressable>
-            ))}
-          </View>
-        ))}
-      </ScrollView>
-
-      <Pressable
-        style={styles.saveButton}
-        onPress={handleSaveRoutine}
-        disabled={isSaving}>
-        {isSaving ? (
-          <ActivityIndicator color={COLORS.text} />
-        ) : (
-          <Text style={styles.buttonText}>Guardar Rutina</Text>
-        )}
-      </Pressable>
-    </View>
-  );
-
+  if (!parsedRoutine) {
+    return (
+      <View style={[styles.container, { paddingTop: insets.top, justifyContent: "center", alignItems: "center" }]}>
+        <MaterialCommunityIcons name="alert-circle-outline" size={60} color={COLORS.danger} />
+        <Text style={[styles.title, { marginTop: 20, marginBottom: 20, textAlign: "center" }]}>
+          No se pudo cargar la rutina
+        </Text>
+        <Text style={[styles.subtitle, { marginBottom: 30, textAlign: "center" }]}>
+          Ha ocurrido un error al procesar los datos de tu rutina
+        </Text>
+        <Pressable style={styles.actionButton} onPress={() => router.back()}>
+          <LinearGradient
+            colors={[COLORS.gradient.start, COLORS.gradient.end]}
+            style={styles.gradientButton}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+          >
+            <Text style={styles.actionButtonText}>VOLVER</Text>
+          </LinearGradient>
+        </Pressable>
+      </View>
+    )
+  }
 
   // Renderizar la información del ejercicio expandido
   const renderExerciseInfo = () => {
@@ -642,15 +620,7 @@ const RutinaGenerada = () => {
       <View style={styles.floatingButtonContainer}>
         <Pressable
           style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
-          onPress={() => {
-            setIsSaving(true)
-            // Lógica para guardar en MongoDB iría aquí
-            setTimeout(() => {
-              Alert.alert("Rutina guardada", "Tu rutina personalizada ha sido guardada exitosamente en tu perfil", [
-                { text: "OK", onPress: () => setIsSaving(false) },
-              ])
-            }, 1500)
-          }}
+          onPress={handleSaveRoutine}
           disabled={isSaving}
         >
           <LinearGradient
