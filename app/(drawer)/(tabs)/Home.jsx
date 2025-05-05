@@ -19,8 +19,8 @@ export default function RoutineScreen() {
 
   const renderItem = ({ item }) => {
     switch(item.tipo) {
-      case 'rutina':
-        return <Etiquetarutina />;
+      /* case 'rutina':
+        return <Etiquetarutina />; */
       case 'ia':
         return <Etiquetaia />;
       case 'dieta':
@@ -33,7 +33,7 @@ export default function RoutineScreen() {
   };
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top }]}>
+    <View style={[styles.container, { paddingTop: insets.top ,paddingBottom: insets.bottom}]}>
       <FlatList 
         data={listaItems}
         renderItem={renderItem}
