@@ -12,6 +12,7 @@ import {
   StatusBar,
   FlatList,
   ActivityIndicator,
+  ScrollView,
 } from "react-native"
 import { useFonts, SofiaSans_900Black } from "@expo-google-fonts/sofia-sans"
 import { Kanit_900Black } from "@expo-google-fonts/kanit"
@@ -55,6 +56,7 @@ const RutinaGymPersonalizada = () => {
   const [selectedWorkoutDuration, setSelectedWorkoutDuration] = useState(null)
   const [selectedEquipment, setSelectedEquipment] = useState([])
   const [selectedWorkoutType, setSelectedWorkoutType] = useState(null)
+  const [routineType, setRoutineType] = useState(null) // Para elegir entre personalizada o predefinida
   const [otherEquipment, setOtherEquipment] = useState("")
   const [showOtherEquipmentInput, setShowOtherEquipmentInput] = useState(false)
 
@@ -65,6 +67,12 @@ const RutinaGymPersonalizada = () => {
 
   // Steps
   const steps = [
+    {
+      id: 0,
+      title: "¿CÓMO QUIERES CREAR TU RUTINA?",
+      type: "routineType",
+      subtitle: "Elige entre personalizada o predefinida",
+    },
     {
       id: 1,
       title: "¿EN QUÉ ÁREAS TE GUSTARÍA ENFOCARTE?",
@@ -107,7 +115,6 @@ const RutinaGymPersonalizada = () => {
 
   // Options
   const focusAreaOptions = [
-    
     { label: "Espalda", value: "back", icon: "human-male-board" },
     { label: "Cardio", value: "cardio", icon: "run-fast" },
     { label: "Pecho", value: "chest", icon: "human-male" },
@@ -176,7 +183,6 @@ const RutinaGymPersonalizada = () => {
     { label: "Jueves", value: "thursday", short: "JU" },
     { label: "Viernes", value: "friday", short: "VI" },
     { label: "Sábado", value: "saturday", short: "SÁ" },
-    
   ]
 
   const workoutDurationOptions = [
@@ -230,6 +236,37 @@ const RutinaGymPersonalizada = () => {
       value: "mixed",
       description: "Combinación de diferentes tipos de entrenamiento",
       icon: "shuffle-variant",
+    },
+  ]
+
+  const predefinedRoutineOptions = [
+    {
+      label: "Push Pull Legs",
+      value: "ppl",
+      description: "Divide el entrenamiento en empujar, tirar y piernas",
+      icon: "weight-lifter",
+      muscles: ["chest", "shoulders", "upper arms", "back", "upper legs", "lower legs"],
+    },
+    {
+      label: "Full Body",
+      value: "fullbody",
+      description: "Entrena todo el cuerpo en cada sesión",
+      icon: "human-handsup",
+      muscles: ["chest", "back", "shoulders", "upper arms", "upper legs", "waist"],
+    },
+    {
+      label: "Upper/Lower",
+      value: "upperlower",
+      description: "Alterna entre tren superior e inferior",
+      icon: "human-male",
+      muscles: ["chest", "back", "shoulders", "upper arms", "upper legs", "lower legs"],
+    },
+    {
+      label: "Bro Split",
+      value: "brosplit",
+      description: "Un grupo muscular por día",
+      icon: "arm-flex",
+      muscles: ["chest", "back", "shoulders", "upper arms", "upper legs", "waist"],
     },
   ]
 
@@ -287,7 +324,14 @@ const RutinaGymPersonalizada = () => {
           useNativeDriver: true,
         }),
       ]).start(() => {
-        setStep(step + 1)
+        // Si estamos en el paso de tipo de rutina y se seleccionó una predefinida,
+        // saltamos al paso de días de entrenamiento
+        if (step === 0 && routineType !== "custom") {
+          setStep(3) // Saltar a la selección de nivel de condición física
+        } else {
+          setStep(step + 1)
+        }
+
         Animated.parallel([
           Animated.timing(fadeAnim, {
             toValue: 1,
@@ -311,6 +355,9 @@ const RutinaGymPersonalizada = () => {
           workoutDuration: selectedWorkoutDuration,
           equipment: selectedEquipment,
           workoutType: selectedWorkoutType,
+          routineType: routineType, // Añadir el tipo de rutina a las preferencias
+          maxMusclesPerDay: 3, // Máximo 3 músculos por día
+          exercisesPerMuscle: 4, // 3-4 ejercicios por músculo
         }
 
         setStep(steps.length) // Pantalla de carga
@@ -358,6 +405,56 @@ const RutinaGymPersonalizada = () => {
         ]).start()
       })
     }
+  }
+
+  const renderRoutineTypeOptions = () => {
+    return (
+      <ScrollView style={styles.routineTypeContainer} showsVerticalScrollIndicator={false}>
+        <Pressable
+          style={[styles.routineTypeOption, routineType === "custom" && styles.routineTypeOptionSelected]}
+          onPress={() => setRoutineType("custom")}
+        >
+          <View style={styles.routineTypeHeader}>
+            <MaterialCommunityIcons
+              name="pencil-outline"
+              size={28}
+              color={routineType === "custom" ? COLORS.primary : COLORS.textSecondary}
+            />
+            <Text style={[styles.routineTypeTitle, routineType === "custom" && styles.routineTypeTitleSelected]}>
+              Personalizada
+            </Text>
+          </View>
+          <Text style={styles.routineTypeDescription}>Selecciona los músculos específicos que quieres trabajar</Text>
+        </Pressable>
+
+        <Text style={styles.routineTypeDivider}>O</Text>
+
+        <Text style={styles.predefinedTitle}>Rutinas predefinidas</Text>
+        {predefinedRoutineOptions.map((item) => (
+          <Pressable
+            key={item.value}
+            style={[styles.routineTypeOption, routineType === item.value && styles.routineTypeOptionSelected]}
+            onPress={() => {
+              setRoutineType(item.value)
+              // Preseleccionar los músculos de la rutina predefinida
+              setSelectedFocusAreas(item.muscles)
+            }}
+          >
+            <View style={styles.routineTypeHeader}>
+              <MaterialCommunityIcons
+                name={item.icon}
+                size={28}
+                color={routineType === item.value ? COLORS.primary : COLORS.textSecondary}
+              />
+              <Text style={[styles.routineTypeTitle, routineType === item.value && styles.routineTypeTitleSelected]}>
+                {item.label}
+              </Text>
+            </View>
+            <Text style={styles.routineTypeDescription}>{item.description}</Text>
+          </Pressable>
+        ))}
+      </ScrollView>
+    )
   }
 
   const renderFocusAreaOptions = () => {
@@ -730,6 +827,8 @@ const RutinaGymPersonalizada = () => {
     if (!currentStep) return null
 
     switch (currentStep.type) {
+      case "routineType":
+        return renderRoutineTypeOptions()
       case "focusAreas":
         return renderFocusAreaOptions()
       case "trainingPlace":
@@ -753,12 +852,13 @@ const RutinaGymPersonalizada = () => {
 
   const isNextButtonDisabled = () => {
     return (
-      (step === 0 && selectedFocusAreas.length === 0) ||
-      (step === 1 && !selectedTrainingPlace) ||
-      (step === 2 && !selectedFitnessLevel) ||
-      (step === 3 && selectedWorkoutDays.length === 0) ||
-      (step === 4 && !selectedWorkoutDuration) ||
-      (step === 6 && !selectedWorkoutType) ||
+      (step === 0 && !routineType) ||
+      (step === 1 && selectedFocusAreas.length === 0) ||
+      (step === 2 && !selectedTrainingPlace) ||
+      (step === 3 && !selectedFitnessLevel) ||
+      (step === 4 && selectedWorkoutDays.length === 0) ||
+      (step === 5 && !selectedWorkoutDuration) ||
+      (step === 7 && !selectedWorkoutType) ||
       loading
     )
   }
@@ -1308,6 +1408,52 @@ const styles = StyleSheet.create({
     height: "100%",
     backgroundColor: COLORS.primary,
     borderRadius: 4,
+  },
+  routineTypeContainer: {
+    flex: 1,
+  },
+  routineTypeOption: {
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+  },
+  routineTypeOptionSelected: {
+    borderColor: COLORS.primary,
+    backgroundColor: "rgba(0, 208, 120, 0.05)",
+  },
+  routineTypeHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  routineTypeTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
+    color: COLORS.text,
+    marginLeft: 12,
+  },
+  routineTypeTitleSelected: {
+    color: COLORS.primary,
+  },
+  routineTypeDescription: {
+    fontSize: 14,
+    color: COLORS.textSecondary,
+    marginLeft: 40,
+  },
+  routineTypeDivider: {
+    textAlign: "center",
+    fontSize: 16,
+    color: COLORS.textSecondary,
+    marginVertical: 16,
+  },
+  predefinedTitle: {
+    fontSize: 16,
+    fontWeight: "bold",
+    color: COLORS.text,
+    marginBottom: 12,
   },
 })
 
