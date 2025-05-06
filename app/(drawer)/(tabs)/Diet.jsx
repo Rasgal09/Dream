@@ -1,7 +1,7 @@
 "use client"
 
 // DietsScreen.js
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import {
   View,
   Text,
@@ -11,9 +11,12 @@ import {
   TextInput,
   Modal,
   Dimensions,
+  ActivityIndicator
 } from "react-native"
 import { Feather, AntDesign } from "@expo/vector-icons"
 import DietCard from '../../../components/ElComponente'
+import AsyncStorage from '@react-native-async-storage/async-storage'
+import axios from 'axios'
 
 const { width } = Dimensions.get("window")
 
@@ -178,9 +181,133 @@ export default function DietsScreen({ navigation }) {
   const [selectedCategory, setSelectedCategory] = useState("all")
   const [showDietDetail, setShowDietDetail] = useState(false)
   const [selectedDiet, setSelectedDiet] = useState(null)
+  const [diets, setDiets] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  // Filtrar dietas por búsqueda y categoría
-  const filteredDiets = sampleDiets.filter((diet) => {
+  useEffect(() => {
+    const fetchDiets = async () => {
+      try {
+        const userId = await AsyncStorage.getItem('userId')
+        if (!userId) throw new Error('Usuario no identificado')
+        
+        //const response = await axios.get('http://192.168.1.126:3000/api/diets/user-diets?userId=${encodeURIcomponent(userId)}');
+        const response = await axios.get(`http://192.168.1.126:3000/api/diets/user-diets?userId=${encodeURIComponent(userId)}`);
+
+        const formattedDiets = response.data.map(diet => ({
+          id: diet._id.toString(),
+          name: diet.name,
+          description: diet.content,
+          category: mapCategory(diet.content),
+          color: getCategoryColor(diet.content),
+          calories: extractCalories(diet.content),
+          macros: extractMacros(diet.content),
+          meals: parseMeals(diet.content),
+          duration: 30,
+          difficulty: "Media",
+          tags: extractTags(diet.content)
+        }))
+        
+        setDiets(formattedDiets)
+      } catch (err) {
+        setError(err.message)
+      } finally {
+        setLoading(false)
+      }
+    }
+    
+    fetchDiets()
+  }, [])
+
+  // Funciones de ayuda para parsear el contenido
+  const mapCategory = (content) => {
+    if (content.includes("ganancia muscular")) return "Deportiva"
+    if (content.includes("keto") || content.includes("cetogénica")) return "Cetogénica"
+    if (content.includes("vegan") || content.includes("vegetariana")) return "Vegana"
+    return "Equilibrada"
+  }
+
+  const getCategoryColor = (content) => {
+    const category = mapCategory(content)
+    switch (category) {
+      case "Deportiva": return "#4CAF50"
+      case "Cetogénica": return "#FF5722"
+      case "Vegana": return "#9C27B0"
+      default: return "#4285F4"
+    }
+  }
+
+  const extractCalories = (content) => {
+    const match = content.match(/(\d+,?\d+)\s*-\s*(\d+,?\d+)\s*kcal/) || content.match(/(\d+,?\d+)\s*kcal/)
+    return match ? parseInt(match[1].replace(',', '')) : 2000
+  }
+
+  const extractMacros = (content) => {
+    const macros = { protein: 30, carbs: 40, fat: 30 } // Valores por defecto
+    try {
+      const proteinMatch = content.match(/(\d+)\s*-\s*(\d+)g\s*proteína/)
+      if (proteinMatch) macros.protein = parseInt(proteinMatch[2])
+      
+      const splitContent = content.split('|')
+      splitContent.forEach(part => {
+        const macroMatch = part.match(/(\d+)%\s*(proteínas|carbs|grasas)/)
+        if (macroMatch) {
+          const value = parseInt(macroMatch[1])
+          switch (macroMatch[2]) {
+            case 'proteínas': macros.protein = value; break
+            case 'carbs': macros.carbs = value; break
+            case 'grasas': macros.fat = value; break
+          }
+        }
+      })
+    } catch (e) {
+      console.warn("Error parsing macros:", e)
+    }
+    return macros
+  }
+
+  const parseMeals = (content) => {
+    const meals = []
+    const lines = content.split('\n')
+    let currentMeal = null
+    
+    lines.forEach(line => {
+      const mealMatch = line.match(/###*\s*(Desayuno|Almuerzo|Merienda|Cena|Comida|Pre-entreno|Post-entreno)/i)
+      if (mealMatch) {
+        if (currentMeal) meals.push(currentMeal)
+        currentMeal = {
+          name: mealMatch[1],
+          foods: [],
+          time: getMealTime(mealMatch[1])
+        }
+      } else if (currentMeal && line.trim().startsWith('-')) {
+        currentMeal.foods.push(line.replace(/^-/, '').trim())
+      }
+    })
+    
+    if (currentMeal) meals.push(currentMeal)
+    return meals
+  }
+
+  const getMealTime = (mealName) => {
+    switch (mealName.toLowerCase()) {
+      case 'desayuno': return "8:00 AM"
+      case 'almuerzo': return "1:00 PM"
+      case 'merienda': return "4:30 PM"
+      case 'cena': return "8:00 PM"
+      default: return ""
+    }
+  }
+
+  const extractTags = (content) => {
+    const tags = []
+    if (content.includes("muscular")) tags.push("ganancia muscular")
+    if (content.includes("keto")) tags.push("cetosis")
+    if (content.includes("vegan")) tags.push("plant-based")
+    return tags.length > 0 ? tags : ["general"]
+  }
+
+  const filteredDiets = diets.filter((diet) => {
     const matchesSearch =
       diet.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       diet.description.toLowerCase().includes(searchQuery.toLowerCase())
@@ -226,6 +353,26 @@ export default function DietsScreen({ navigation }) {
           <View style={[styles.macroLegendColor, { backgroundColor: "#2196F3" }]} />
           <Text style={styles.macroLegendText}>Grasas {macros.fat}%</Text>
         </View>
+      </View>
+    )
+  }
+
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color="#00D078" style={styles.loader} />
+      </View>
+    )
+  }
+
+  if (error) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.errorText}>Error: {error}</Text>
+        <TouchableOpacity style={styles.retryButton} onPress={() => window.location.reload()}>
+          <Text style={styles.retryText}>Reintentar</Text>
+        </TouchableOpacity>
       </View>
     )
   }
@@ -782,5 +929,28 @@ const styles = StyleSheet.create({
   },
   detailFooterSpace: {
     height: 40,
+  },
+  loader: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#1A1A1A'
+  },
+  errorText: {
+    color: '#FF4444',
+    fontSize: 18,
+    textAlign: 'center',
+    marginTop: 50,
+    padding: 20
+  },
+  retryButton: {
+    marginTop: 20,
+    padding: 15,
+    backgroundColor: '#00D078',
+    borderRadius: 10
+  },
+  retryText: {
+    color: 'white',
+    fontWeight: 'bold'
   },
 });
