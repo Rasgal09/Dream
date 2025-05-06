@@ -47,7 +47,7 @@ export const CompUser = () => {
           return
         }
 
-        const response = await axios.get(`http://192.168.1.126:3000/api/users/usuario?correo=${encodeURIComponent(userEmail)}`);
+        const response = await axios.get(`http://192.168.1.79:3000/api/users/usuario?correo=${encodeURIComponent(userEmail)}`);
         
         if (!response.data) {
           throw new Error("No se recibieron datos del usuario")

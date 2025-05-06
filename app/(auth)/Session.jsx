@@ -30,7 +30,7 @@ const Session = () => {
     setCargando(true);
   
     try {
-      const response = await axios.post('http://192.168.1.126:3000/api/users/login', {
+      const response = await axios.post('http://192.168.1.79:3000/api/users/login', {
         correo,
         contrasena
       });

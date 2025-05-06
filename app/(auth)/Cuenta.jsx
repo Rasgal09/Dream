@@ -350,14 +350,14 @@ const RegistroCompleto = () => {
         setIsSubmitting(true)
         
          // 1. Captura la respuesta correctamente
-        const response = await axios.post('http://192.168.1.126:3000/api/users/registro', {
+        const response = await axios.post('http://192.168.1.79:3000/api/users/registro', {
           nombre: nombre.trim(),
           genero: selectedSex,
           edad: selectedAge,
           correo: correo.trim().toLowerCase(),
           contrasena: contrasena,
           peso: selectedWeight,
-          altura: selectedHeight 
+          altura: selectedHeight/100 
         });
 
         // 2. Ahora response está definido
